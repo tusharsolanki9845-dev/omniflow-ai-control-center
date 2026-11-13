@@ -21,21 +21,14 @@ import {
   Smartphone,
   Download,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 import { AIProject } from '../types';
-import { PortfolioEditorModal } from './PortfolioEditorModal';
 import { TaskCompletionModal } from './TaskCompletionModal';
 import { AddProjectModal } from './AddProjectModal';
 
 interface ProjectsHubProps {
   projects: AIProject[];
   onToggleTask: (projectId: string, taskId: string) => void;
-  onSyncProject: (projectId: string) => Promise<void>;
-  onStageTaskCode: (projectId: string, taskTitle: string) => void;
-  onOpenActionConsoleWithPrompt: (prompt: string) => void;
-  onOpenApprovals: () => void;
   onAddProject?: (project: AIProject) => void;
-  onSyncAllGitHub?: () => Promise<{ success: boolean; count: number }>;
   onOpenGitHubUpload?: () => void;
   onOpenApkModal?: () => void;
   onOpenVercelDeploy?: () => void;
@@ -45,12 +38,7 @@ interface ProjectsHubProps {
 export const ProjectsHubView: React.FC<ProjectsHubProps> = ({
   projects,
   onToggleTask,
-  onSyncProject,
-  onStageTaskCode,
-  onOpenActionConsoleWithPrompt,
-  onOpenApprovals,
   onAddProject,
-  onSyncAllGitHub,
   onOpenGitHubUpload,
   onOpenApkModal,
   onOpenVercelDeploy,
@@ -58,51 +46,12 @@ export const ProjectsHubView: React.FC<ProjectsHubProps> = ({
 }) => {
   const [selectedToolFilter, setSelectedToolFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [syncingId, setSyncingId] = useState<string | null>(null);
-  const [isSyncingAllGitHub, setIsSyncingAllGitHub] = useState<boolean>(false);
-  const [selectedProject, setSelectedProject] = useState<AIProject>(projects[0] || null);
-  const [stagedNotice, setStagedNotice] = useState<string | null>(null);
-  const [isPortfolioModalOpen, setIsPortfolioModalOpen] = useState<boolean>(false);
   const [isAddProjectModalOpen, setIsAddProjectModalOpen] = useState<boolean>(false);
-  const [isProbingLive, setIsProbingLive] = useState<boolean>(false);
-  const [liveProbeResult, setLiveProbeResult] = useState<{
-    status: 'online' | 'probing' | 'error';
-    latencyMs: number;
-    lastChecked: string;
-  }>({
-    status: 'online',
-    latencyMs: 142,
-    lastChecked: 'Just now',
-  });
   const [taskModalState, setTaskModalState] = useState<{
     isOpen: boolean;
     project: AIProject | null;
     taskTitle: string;
   }>({ isOpen: false, project: null, taskTitle: '' });
-
-  const handleProbeLiveSite = async () => {
-    setIsProbingLive(true);
-    const start = performance.now();
-    try {
-      await fetch('https://tushar-portfolio-live.vercel.app', { mode: 'no-cors' });
-      const duration = Math.round(performance.now() - start);
-      setLiveProbeResult({
-        status: 'online',
-        latencyMs: Math.max(duration, 96),
-        lastChecked: new Date().toLocaleTimeString(),
-      });
-    } catch (e) {
-      setLiveProbeResult({
-        status: 'online',
-        latencyMs: 130,
-        lastChecked: new Date().toLocaleTimeString(),
-      });
-    } finally {
-      setIsProbingLive(false);
-    }
-  };
-
-  const portfolioProject = projects.find((p) => p.repoName === 'tushar-portfolio-vercel') || projects[0];
 
   const filteredProjects = projects.filter((p) => {
     const matchesTool = selectedToolFilter === 'all' || p.aiToolOrigin === selectedToolFilter;
@@ -116,33 +65,6 @@ export const ProjectsHubView: React.FC<ProjectsHubProps> = ({
       p.pendingTasks.some((t) => t.title.toLowerCase().includes(q))
     );
   });
-
-  const handleSync = async (id: string) => {
-    setSyncingId(id);
-    try {
-      await onSyncProject(id);
-    } finally {
-      setSyncingId(null);
-    }
-  };
-
-  const handleStageTask = (projectId: string, taskTitle: string) => {
-    onStageTaskCode(projectId, taskTitle);
-    setStagedNotice(taskTitle);
-    setTimeout(() => setStagedNotice(null), 3000);
-  };
-
-  const handleSyncAllGitHub = async () => {
-    if (!onSyncAllGitHub) return;
-    setIsSyncingAllGitHub(true);
-    try {
-      const res = await onSyncAllGitHub();
-      setStagedNotice(`Synchronized ${res.count} repositories directly from GitHub REST API!`);
-      setTimeout(() => setStagedNotice(null), 3500);
-    } finally {
-      setIsSyncingAllGitHub(false);
-    }
-  };
 
   const getToolBadge = (origin: AIProject['aiToolOrigin']) => {
     switch (origin) {
@@ -174,197 +96,60 @@ export const ProjectsHubView: React.FC<ProjectsHubProps> = ({
 
   return (
     <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-8">
-      {/* Top Banner Notice when code is staged */}
-      <AnimatePresence>
-        {stagedNotice && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="p-4 rounded-xl bg-indigo-600 text-white flex items-center justify-between shadow-lg text-xs"
-          >
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-white" />
-              <span>
-                Code patch for <strong>"{stagedNotice}"</strong> staged! Enqueued in Approval Queue for review before committing to GitHub.
-              </span>
-            </div>
-            <button
-              onClick={onOpenApprovals}
-              className="px-3 py-1 bg-white text-indigo-700 hover:bg-slate-100 font-bold rounded-md whitespace-nowrap shadow-xs"
-            >
-              Review in Approval Queue &rarr;
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-xs font-semibold uppercase tracking-wider">
             <FolderGit2 className="w-4 h-4" />
-            <span>Multi-Tool Project Hub & GitHub Sync</span>
+            <span>Project workspace</span>
           </div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-1">
-            Tushar's Portfolio & AI Projects Completion Pipeline
+            Projects and task drafts
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Inspect live deployments, edit portfolio sections, track code across Cursor, v0, Bolt, and Claude, and commit directly to GitHub with approval safeguards.
+            Project records are stored in this browser. Live repository synchronization and task execution are not configured.
           </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {onSyncAllGitHub && (
-            <button
-              onClick={handleSyncAllGitHub}
-              disabled={isSyncingAllGitHub}
-              className="px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-1.5 shadow-2xs transition-colors"
-              title="Query real GitHub API (@tusharsolanki9845-dev) for public repositories and push status"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 text-indigo-500 ${isSyncingAllGitHub ? 'animate-spin' : ''}`} />
-              <span>{isSyncingAllGitHub ? 'Syncing...' : 'Sync GitHub API'}</span>
-            </button>
-          )}
-
           {onOpenGitHubUpload && (
             <button
               onClick={onOpenGitHubUpload}
               className="px-3.5 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-md flex items-center gap-1.5 shadow-2xs transition-all"
             >
               <Github className="w-3.5 h-3.5" />
-              <span>Upload OmniFlow to GitHub</span>
+              <span>View GitHub repository</span>
             </button>
           )}
 
-          <a
-            href="https://tushar-portfolio-live.vercel.app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md hover:bg-slate-50 flex items-center gap-1.5 shadow-2xs"
-          >
-            <Globe className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Live Portfolio</span>
-            <ExternalLink className="w-3 h-3 text-slate-400" />
-          </a>
-          <a
-            href="https://github.com/tusharsolanki9845-dev"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3.5 py-1.5 text-xs font-semibold text-white bg-slate-900 dark:bg-indigo-600 hover:bg-slate-800 rounded-md flex items-center gap-1.5 shadow-2xs"
-          >
-            <Github className="w-3.5 h-3.5" />
-            <span>@tusharsolanki9845-dev</span>
-          </a>
         </div>
       </div>
 
-      {/* Featured Card: Live Portfolio Hub (tushar-portfolio-live.vercel.app) */}
-      <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950/80 to-slate-950 text-white border border-indigo-900/40 shadow-xl space-y-5">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs font-mono text-emerald-400">
-              <span className="font-semibold">Vercel Production Active</span>
-              <span className="text-slate-500">·</span>
-              <span>SSL Verified</span>
-              <span className="text-slate-500">·</span>
-              <span>Schema.org Valid</span>
-            </div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <span>tushar-portfolio-live.vercel.app</span>
-            </h2>
-            <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-              Tushar Solanki | Full-Stack Web Developer. Verified project evidence across e-commerce, civic-tech, and SaaS-style web products with React, Node.js, Firebase, and PWA patterns.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0 flex-wrap">
-            <button
-              onClick={handleProbeLiveSite}
-              disabled={isProbingLive}
-              className="px-3.5 py-2 text-xs font-semibold text-slate-200 bg-slate-800/90 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors flex items-center gap-1.5"
-              title="Test real HTTP latency and SSL reachability"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 text-indigo-400 ${isProbingLive ? 'animate-spin' : ''}`} />
-              <span>{isProbingLive ? 'Testing...' : 'Test Live Health'}</span>
-            </button>
-            <button
-              onClick={() => setIsPortfolioModalOpen(true)}
-              className="px-4 py-2 text-xs font-bold text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
-            >
-              <Sparkles className="w-3.5 h-3.5 fill-current" />
-              <span>Edit Portfolio with AI</span>
-            </button>
-            <a
-              href="https://github.com/tusharsolanki9845-dev/tushar-portfolio-vercel"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3.5 py-2 text-xs font-medium text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors flex items-center gap-1.5"
-            >
-              <Github className="w-3.5 h-3.5" />
-              <span>Repo</span>
-            </a>
-            {onOpenApkModal && (
-              <button
-                onClick={onOpenApkModal}
-                className="px-3.5 py-2 text-xs font-semibold text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900/60 border border-emerald-800 rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
-                title="Download Android APK Package (OmniFlow-v1.2-release.apk)"
-              >
-                <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Download APK</span>
-              </button>
-            )}
-            {onOpenVercelDeploy && (
-              <button
-                onClick={onOpenVercelDeploy}
-                className="px-3.5 py-2 text-xs font-semibold text-white bg-black hover:bg-slate-800 border border-slate-700 rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
-                title="Deploy to Vercel Production (tushar-portfolio-live.vercel.app)"
-              >
-                <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
-                  <path d="M12 1L24 22H0L12 1Z" />
-                </svg>
-                <span>Deploy to Vercel</span>
-              </button>
-            )}
-            {onOpenNetlifyDeploy && (
-              <button
-                onClick={onOpenNetlifyDeploy}
-                className="px-3.5 py-2 text-xs font-semibold text-teal-200 bg-teal-950/80 hover:bg-teal-900 border border-teal-800 rounded-lg transition-colors flex items-center gap-1.5 shadow-xs"
-                title="Deploy to Netlify / Nestify Edge (omniflow.netlify.app)"
-              >
-                <svg className="w-3 h-3 fill-current text-teal-400" viewBox="0 0 24 24">
-                  <path d="M6.49 19.09h-.12a.68.68 0 0 1-.58-.69V5.6a.68.68 0 0 1 .58-.69h.12a.7.7 0 0 1 .6.35l7.91 13.83zm10.9-1.28l-4.1-7.17 4.1-7.17a.69.69 0 0 1 1.2 0l4.1 7.17-4.1 7.17a.69.69 0 0 1-1.2 0zM12 9.43L8.85 3.93a.7.7 0 0 1 .61-1.05h6.08a.7.7 0 0 1 .61 1.05L13 9.43a1.15 1.15 0 0 1-1 0z" />
-                </svg>
-                <span>Deploy Netlify / Nestify</span>
-              </button>
-            )}
-          </div>
+      <section className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="font-bold text-slate-900 dark:text-slate-100">Project workspace</h2>
+          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+            Project notes are stored in this browser. GitHub synchronization and deployment are not configured in this build.
+          </p>
         </div>
-
-        {/* Live Portfolio Audit Telemetry Strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-slate-800/80 text-xs font-mono">
-          <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 space-y-1">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider">Framework & Packaging</span>
-            <div className="font-semibold text-slate-200 flex items-center gap-1.5">
-              <span>React 19 + PWA + APK</span>
-            </div>
-          </div>
-          <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 space-y-1">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider">Live Response & SSL</span>
-            <div className="font-semibold text-emerald-400 flex items-center gap-1 tabular-nums">
-              <Check className="w-3 h-3" /> {liveProbeResult.latencyMs}ms · 200 OK
-            </div>
-          </div>
-          <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 space-y-1">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider">Linked GitHub</span>
-            <div className="font-semibold text-slate-200 truncate">tushar-portfolio-vercel</div>
-          </div>
-          <div className="p-3 rounded-lg bg-slate-900/80 border border-slate-800 space-y-1">
-            <span className="text-[10px] text-slate-400 uppercase tracking-wider">Active Repositories</span>
-            <div className="font-semibold text-indigo-300 tabular-nums">{projects.length} AI Repos Tracked</div>
-          </div>
+        <div className="flex flex-wrap gap-2">
+          {onOpenGitHubUpload && (
+            <button onClick={onOpenGitHubUpload} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900">
+              View GitHub repository
+            </button>
+          )}
+          {onOpenApkModal && (
+            <button onClick={onOpenApkModal} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+              Install app
+            </button>
+          )}
+          {onOpenVercelDeploy && (
+            <button onClick={onOpenVercelDeploy} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+              Hosting requirements
+            </button>
+          )}
         </div>
-      </div>
+      </section>
 
       {/* Filter Tabs by AI Tool Origin & Search */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -446,25 +231,19 @@ export const ProjectsHubView: React.FC<ProjectsHubProps> = ({
             </button>
           )}
 
-          <button
-            onClick={() =>
-              onOpenActionConsoleWithPrompt(
-                'Audit all my active projects across Cursor, v0, and GitHub, list pending completion tasks, and prioritize next sprint milestones.'
-              )
-            }
-            className="px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 border border-indigo-200 dark:border-indigo-800 rounded-lg transition-colors flex items-center gap-1.5"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Prioritize All with AI &rarr;</span>
-          </button>
         </div>
       </div>
 
       {/* Projects Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {filteredProjects.length === 0 && (
+          <div className="col-span-full rounded-2xl border border-dashed border-slate-300 p-10 text-center dark:border-slate-700">
+            <FolderGit2 className="mx-auto h-8 w-8 text-slate-400" />
+            <h2 className="mt-3 text-sm font-semibold text-slate-800 dark:text-slate-200">No projects yet</h2>
+            <p className="mt-1 text-xs text-slate-500">Add a project to keep its milestones and task notes in this browser.</p>
+          </div>
+        )}
         {filteredProjects.map((proj) => {
-          const isSyncing = syncingId === proj.id;
-
           return (
             <div
               key={proj.id}
@@ -499,14 +278,6 @@ export const ProjectsHubView: React.FC<ProjectsHubProps> = ({
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => handleSync(proj.id)}
-                    disabled={isSyncing}
-                    title="Sync with GitHub"
-                    className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-indigo-500' : ''}`} />
-                  </button>
                 </div>
 
                 <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">
@@ -592,11 +363,7 @@ export const ProjectsHubView: React.FC<ProjectsHubProps> = ({
                   </a>
 
                   <button
-                    onClick={() =>
-                      onOpenActionConsoleWithPrompt(
-                        `Inspect ${proj.name} (${proj.repoName}), review next task: "${proj.nextAction}", and generate code patch to stage for GitHub.`
-                      )
-                    }
+                    onClick={() => setTaskModalState({ isOpen: true, project: proj, taskTitle: proj.nextAction })}
                     className="px-2.5 py-1 text-[11px] font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded transition-colors flex items-center gap-1 shadow-2xs"
                   >
                     <Sparkles className="w-3 h-3" />
@@ -609,30 +376,12 @@ export const ProjectsHubView: React.FC<ProjectsHubProps> = ({
         })}
       </div>
 
-      {/* Interactive Portfolio Editor Modal */}
-      <PortfolioEditorModal
-        isOpen={isPortfolioModalOpen}
-        onClose={() => setIsPortfolioModalOpen(false)}
-        onStageChanges={(summary) => {
-          onStageTaskCode('proj-portfolio', summary);
-        }}
-        onOpenApprovals={onOpenApprovals}
-      />
-
       {/* Interactive Task Completion Modal */}
       <TaskCompletionModal
         isOpen={taskModalState.isOpen}
         onClose={() => setTaskModalState({ isOpen: false, project: null, taskTitle: '' })}
         project={taskModalState.project}
         taskTitle={taskModalState.taskTitle}
-        onStageCodeToGitHub={(projectId, taskTitle) => {
-          onStageTaskCode(projectId, taskTitle);
-          const task = taskModalState.project?.pendingTasks.find((t) => t.title === taskTitle);
-          if (task) {
-            onToggleTask(projectId, task.id);
-          }
-        }}
-        onOpenApprovals={onOpenApprovals}
       />
 
       {/* Track New Project Modal */}

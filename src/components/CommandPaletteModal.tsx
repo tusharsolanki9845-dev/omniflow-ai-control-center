@@ -110,8 +110,8 @@ export const CommandPaletteModal: React.FC<CommandPaletteProps> = ({
       {
         id: 'nav-projects',
         tab: 'projects',
-        label: 'Portfolio & AI Hub (Tushar Solanki)',
-        desc: 'Manage live Vercel portfolio, GitHub repos, and Cursor/v0 AI builds',
+        label: 'Projects',
+        desc: 'Track project details and task drafts stored in this browser',
         icon: FolderGit2,
       },
       {
@@ -125,7 +125,7 @@ export const CommandPaletteModal: React.FC<CommandPaletteProps> = ({
         id: 'nav-chat',
         tab: 'chat',
         label: 'Model Gateway & Switcher',
-        desc: 'Query Gemini 3.8 Flash, Claude 3.7 Sonnet, DeepSeek R1, or local models',
+        desc: 'Query Gemini 2.5 Flash, Claude 3.7 Sonnet, DeepSeek R1, or local models',
         icon: Cpu,
       },
       {
@@ -186,15 +186,13 @@ export const CommandPaletteModal: React.FC<CommandPaletteProps> = ({
     () => [
       {
         id: 'wf-portfolio',
-        title: '⚡ Turbo Audit Portfolio & Sync to GitHub',
-        prompt:
-          'Audit tushar-portfolio-live.vercel.app, verify Vercel SSL and Schema.org Person JSON-LD, extract recent AI builds, and stage commit to tusharsolanki9845-dev/tushar-portfolio-vercel.',
+        title: 'Release checklist',
+        prompt: 'Draft a checklist for reviewing a web application before release.',
       },
       {
         id: 'wf-hunter',
-        title: '🚀 Complete Outreach Engine in Webclient Hunter AI',
-        prompt:
-          'Audit Webclient Hunter AI repository, implement automated personalized outreach generator with sub-second latency, and stage GitHub PR with unit tests.',
+        title: 'TypeScript tests',
+        prompt: 'Suggest focused tests for a TypeScript API client.',
       },
       {
         id: 'wf-invoice',
@@ -359,9 +357,9 @@ export const CommandPaletteModal: React.FC<CommandPaletteProps> = ({
         id: 'cmd-deploy-netlify',
         category: 'nav',
         categoryLabel: 'Deployment',
-        title: 'Deploy Live to Netlify / Nestify (omniflow.netlify.app)',
-        subtitle: '1-click token deploy, 1-click web console, Nestify.io cluster, or CLI push',
-        badge: 'Edge Live',
+        title: 'View hosting requirements',
+        subtitle: 'See the Node.js and container requirements for deploying OmniFlow',
+        badge: 'Hosting',
         badgeColor: 'bg-teal-100 dark:bg-teal-950 text-teal-700 dark:text-teal-300',
         icon: Rocket,
         action: () => {
@@ -376,9 +374,9 @@ export const CommandPaletteModal: React.FC<CommandPaletteProps> = ({
         id: 'cmd-deploy-vercel',
         category: 'nav',
         categoryLabel: 'Deployment',
-        title: 'Deploy Live to Vercel (tushar-portfolio-live.vercel.app)',
-        subtitle: 'Deploy current production build to Vercel Edge with zero-downtime',
-        badge: 'Vercel Live',
+        title: 'View Vercel hosting requirements',
+        subtitle: 'Review how this app depends on a Node.js server',
+        badge: 'Hosting',
         badgeColor: 'bg-black dark:bg-slate-800 text-white',
         icon: Rocket,
         action: () => {

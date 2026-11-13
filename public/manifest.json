@@ -2,7 +2,7 @@
   "id": "/",
   "name": "OmniFlow AI Control Center",
   "short_name": "OmniFlow",
-  "description": "Unified AI control center & developer gateway for Tushar Solanki connecting models, tools, and live portfolios.",
+  "description": "A control center for AI-assisted workflows, project tracking, approvals, and operational dashboards.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -4,8 +4,6 @@ import {
   Sparkles,
   ChevronDown,
   Cpu,
-  Clock,
-  Coins,
   Brain,
   Wrench,
   CheckCircle2,
@@ -36,11 +34,12 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
   onClearMessages,
   onOpenApprovals,
 }) => {
-  const [selectedModelId, setSelectedModelId] = useState<string>(models[0]?.id || 'gemini-3.8-flash');
+  const [selectedModelId, setSelectedModelId] = useState<string>(models[0]?.id || 'gemini-2.5-flash');
   const [inputPrompt, setInputPrompt] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [systemPrompt, setSystemPrompt] = useState<string>(
-    'You are OmniFlow Control Assistant. Standardize tool calls through MCP and cloud connectors, always enforcing risk approvals.'
+    'You are OmniFlow Control Assistant. You cannot access local files, external services, or execute tools unless tools are explicitly provided in the current request.'
   );
   const [showConfig, setShowConfig] = useState<boolean>(false);
   const [isComparisonMode, setIsComparisonMode] = useState<boolean>(false);
@@ -64,7 +63,7 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
     setComparisonResults({
       prompt: testPrompt,
       gemini: {
-        text: `Gemini 3.8 Flash response:\nAnalyzed request against connected tools. Found relevant invoice in ~/Downloads and generated structured Notion schema payload in 320ms.`,
+        text: `Gemini 2.5 Flash response:\nAnalyzed request against connected tools. Found relevant invoice in ~/Downloads and generated structured Notion schema payload in 320ms.`,
         latency: 320,
         tokens: 348,
         cost: 0.00012,
@@ -92,6 +91,7 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
     if (!inputPrompt.trim() || isLoading) return;
     const text = inputPrompt;
     setInputPrompt('');
+    setSendError(null);
 
     if (isComparisonMode) {
       await handleRunComparison(text);
@@ -101,6 +101,8 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
     setIsLoading(true);
     try {
       await onSendMessage(text, selectedModelId, systemPrompt);
+    } catch (error) {
+      setSendError(error instanceof Error ? error.message : 'The chat request failed.');
     } finally {
       setIsLoading(false);
     }
@@ -160,19 +162,11 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
 
           {/* Model Specs / Telemetry */}
           <div className="hidden lg:flex items-center gap-2.5 text-xs text-slate-500 dark:text-slate-400 pl-2 border-l border-slate-200 dark:border-slate-800">
-            <span className="flex items-center gap-1 font-mono tabular-nums">
-              <Clock className="w-3.5 h-3.5 text-indigo-500" />
-              ~{activeModel.latencyAvgMs}ms
-            </span>
-            <span>·</span>
-            <span className="flex items-center gap-1 font-mono tabular-nums">
-              <Coins className="w-3.5 h-3.5 text-indigo-500" />
-              ${activeModel.costPer1kInput.toFixed(4)} / ${activeModel.costPer1kOutput.toFixed(4)}
-            </span>
-            <span>·</span>
             <span className="text-slate-400 font-mono tabular-nums">
               {(activeModel.contextWindow / 1000).toFixed(0)}k ctx
             </span>
+            <span>·</span>
+            <span>View actual usage in provider billing</span>
           </div>
         </div>
 
@@ -186,7 +180,7 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
             }`}
           >
             <Cpu className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{isComparisonMode ? 'Comparison Mode (Active)' : 'Compare 3 Models'}</span>
+            <span className="hidden sm:inline">{isComparisonMode ? 'Example Comparison (Active)' : 'Example Comparison'}</span>
             <span className="sm:hidden">Compare</span>
           </button>
 
@@ -235,11 +229,11 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
               <div className="flex items-center gap-2">
                 <Cpu className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 <span className="font-semibold text-slate-900 dark:text-slate-100">
-                  Tri-Model Benchmark: Gemini 3.8 Flash vs Claude 3.7 Sonnet vs DeepSeek R1
+                  Example comparison (sample data only)
                 </span>
               </div>
               <span className="text-[11px] font-mono text-slate-500">
-                Compare latency, output quality, and cost side-by-side
+                Live multi-provider benchmarking is not configured.
               </span>
             </div>
 
@@ -263,11 +257,11 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Gemini 3.8 Flash */}
+                  {/* Gemini 2.5 Flash */}
                   <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0e1424]/80 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 space-y-3 flex flex-col justify-between shadow-xs">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-                        <span className="font-bold text-xs text-slate-900 dark:text-slate-100">Gemini 3.8 Flash</span>
+                        <span className="font-bold text-xs text-slate-900 dark:text-slate-100">Gemini 2.5 Flash</span>
                         <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 rounded">
                           Fastest ({comparisonResults.gemini.latency}ms)
                         </span>
@@ -366,7 +360,7 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
                 Unified AI Model Gateway
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
-                Route requests to Gemini 3.8 Flash, Claude 3.7, or local models. All tool interactions are validated by security connectors.
+                Route requests to Gemini 2.5 Flash, Claude 3.7, or local models. All tool interactions are validated by security connectors.
               </p>
             </div>
 
@@ -507,7 +501,9 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
                         {msg.tokenStats.promptTokens}, out: {msg.tokenStats.completionTokens})
                       </span>
                       <span>
-                        {msg.tokenStats.latencyMs}ms · ${msg.tokenStats.totalCost.toFixed(5)}
+                        {msg.tokenStats.latencyMs}ms
+                        {msg.tokenStats.totalCost !== undefined &&
+                          ` · $${msg.tokenStats.totalCost.toFixed(5)}`}
                       </span>
                     </div>
                   )}
@@ -521,6 +517,12 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
       {/* Input Composer */}
       <div className="border-t border-slate-200/80 dark:border-slate-800/80 p-3 sm:p-4 bg-white/80 dark:bg-[#090d16]/85 backdrop-blur-xl">
         <div className="max-w-4xl mx-auto space-y-2">
+          {sendError && (
+            <div role="alert" className="flex items-start gap-2 rounded-lg border border-rose-300 bg-rose-50 p-2.5 text-xs text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{sendError}</span>
+            </div>
+          )}
           {/* Quick shortcuts */}
           <div className="hidden sm:flex items-center gap-2 overflow-x-auto pb-1 text-xs">
             <span className="text-[11px] text-slate-400 shrink-0 font-medium">Quick prompts:</span>
@@ -563,6 +565,9 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
                 setIsLoading(true);
                 try {
                   await onSendMessage(transcript, selectedModelId, systemPrompt);
+                  setSendError(null);
+                } catch (error) {
+                  setSendError(error instanceof Error ? error.message : 'The chat request failed.');
                 } finally {
                   setIsLoading(false);
                 }

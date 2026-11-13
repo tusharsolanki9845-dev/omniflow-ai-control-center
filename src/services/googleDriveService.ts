@@ -1,4 +1,4 @@
-import { initializeApp, getApps } from 'firebase/app';
+import { getApps, initializeApp } from 'firebase/app';
 import {
   getAuth,
   signInWithPopup,
@@ -7,11 +7,33 @@ import {
   signOut,
   User,
 } from 'firebase/auth';
-import firebaseConfig from '../../firebase-applet-config.json';
 
-// Ensure Firebase is initialized only once
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-export const auth = getAuth(app);
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+};
+
+const isFirebaseConfigured = () =>
+  Boolean(
+    firebaseConfig.apiKey &&
+      firebaseConfig.authDomain &&
+      firebaseConfig.projectId &&
+      firebaseConfig.appId
+  );
+
+const getFirebaseAuth = () => {
+  if (!isFirebaseConfigured()) {
+    throw new Error('Google Drive integration is not configured for this deployment.');
+  }
+
+  const app = getApps().find((candidate) => candidate.name === 'omniflow-drive') ??
+    initializeApp(firebaseConfig, 'omniflow-drive');
+  return getAuth(app);
+};
 
 // Configure Google Auth Provider with Google Drive file scope
 export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
@@ -56,7 +78,12 @@ export const initDriveAuth = (
   onAuthSuccess?: (user: User, token: string) => void,
   onAuthFailure?: () => void
 ) => {
-  return onAuthStateChanged(auth, async (user: User | null) => {
+  if (!isFirebaseConfigured()) {
+    onAuthFailure?.();
+    return () => {};
+  }
+
+  return onAuthStateChanged(getFirebaseAuth(), async (user: User | null) => {
     if (user) {
       if (cachedAccessToken) {
         if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
@@ -77,7 +104,7 @@ export const initDriveAuth = (
 export const signInWithGoogleDrive = async (): Promise<{ user: User; accessToken: string }> => {
   try {
     isSigningIn = true;
-    const result = await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(getFirebaseAuth(), provider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
 
     if (!credential?.accessToken) {
@@ -98,7 +125,9 @@ export const signInWithGoogleDrive = async (): Promise<{ user: User; accessToken
  * Signs out and clears the in-memory access token
  */
 export const signOutGoogleDrive = async (): Promise<void> => {
-  await signOut(auth);
+  if (isFirebaseConfigured()) {
+    await signOut(getFirebaseAuth());
+  }
   cachedAccessToken = null;
 };
 

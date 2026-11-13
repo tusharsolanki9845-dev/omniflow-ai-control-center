@@ -43,6 +43,7 @@ export const ConnectorRegistry: React.FC<ConnectorRegistryProps> = ({
   const [activeCategory, setActiveCategory] = useState<'all' | ConnectionCategory>('all');
   const [testingId, setTestingId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
+  const [testError, setTestError] = useState<string | null>(null);
 
   // New Connector form state
   const [newName, setNewName] = useState('');
@@ -59,8 +60,11 @@ export const ConnectorRegistry: React.FC<ConnectorRegistryProps> = ({
 
   const handleTest = async (id: string) => {
     setTestingId(id);
+    setTestError(null);
     try {
       await onTestConnection(id);
+    } catch (error) {
+      setTestError(error instanceof Error ? error.message : 'Connector health check failed.');
     } finally {
       setTestingId(null);
     }
@@ -75,15 +79,13 @@ export const ConnectorRegistry: React.FC<ConnectorRegistryProps> = ({
       name: newName,
       provider: newProvider || newName.toLowerCase().replace(/\s+/g, '_'),
       category: newCategory,
-      status: 'connected',
+      status: 'disconnected',
       scopes: newScopes ? newScopes.split(',').map((s) => s.trim()) : ['read:standard'],
       riskLevel: newRisk,
       endpoint: newEndpoint,
-      description: 'Custom registered connector via OmniFlow gateway.',
+      description: 'Registered connector configuration; authorization and execution are not configured.',
       icon: newCategory === 'mcp' ? 'Layers' : 'Radio',
-      lastTestedAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      latencyMs: 45,
-      isEnabled: true,
+      isEnabled: false,
       version: '1.0.0',
     };
 
@@ -132,7 +134,16 @@ export const ConnectorRegistry: React.FC<ConnectorRegistryProps> = ({
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Standardize access to cloud APIs, Model Context Protocol (MCP) servers, and local daemons with granular scopes.
           </p>
+          <p className="mt-2 text-[11px] text-amber-700 dark:text-amber-300">
+            Connector entries are configuration examples. Provider authorization, health checks, and tool execution are not configured.
+          </p>
         </div>
+
+        {testError && (
+          <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+            {testError}
+          </div>
+        )}
 
         <div className="flex items-center gap-3 shrink-0">
           <button

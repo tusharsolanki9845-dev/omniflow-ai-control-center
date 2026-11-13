@@ -19,7 +19,7 @@ export const UsageAnalyticsView: React.FC<UsageProps> = ({ settings, models }) =
   const budgetPct = Math.round((settings.currentMonthSpendUsd / settings.monthlyBudgetCapUsd) * 100);
 
   const modelUsage = [
-    { name: 'Gemini 3.8 Flash', provider: 'Google / LiteLLM', requests: 482, tokens: '1.42M', cost: '$1.42', latency: '340ms' },
+    { name: 'Gemini 2.5 Flash', provider: 'Google / LiteLLM', requests: 482, tokens: '1.42M', cost: '$1.42', latency: '340ms' },
     { name: 'Claude 3.7 Sonnet', provider: 'Anthropic / OpenRouter', requests: 124, tokens: '420K', cost: '$24.60', latency: '680ms' },
     { name: 'GPT-4.5 Turbo', provider: 'OpenAI / LiteLLM', requests: 62, tokens: '210K', cost: '$10.50', latency: '710ms' },
     { name: 'DeepSeek R1', provider: 'DeepSeek / LiteLLM', requests: 180, tokens: '580K', cost: '$1.93', latency: '920ms' },

@@ -64,7 +64,7 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
       id: projectId,
       name: name.trim(),
       repoName: repoName.trim(),
-      githubUrl: `https://github.com/tusharsolanki9845-dev/${repoName.trim()}`,
+      githubUrl: `https://github.com/${repoName.trim()}`,
       liveUrl: liveUrl.trim() || undefined,
       aiToolOrigin,
       techStack: parsedTechStack.length > 0 ? parsedTechStack : ['React', 'TypeScript', 'Tailwind'],
@@ -165,21 +165,18 @@ export const AddProjectModal: React.FC<AddProjectModalProps> = ({
           {/* GitHub Repo Name */}
           <div>
             <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              GitHub Repository Name *
+              GitHub Repository (owner/repository) *
             </label>
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400 font-mono text-[11px] bg-slate-100 dark:bg-slate-800 px-2 py-2 rounded-lg border border-slate-300 dark:border-slate-700">
-                github.com/tusharsolanki9845-dev/
-              </span>
-              <input
-                type="text"
-                required
-                placeholder="repo-slug"
-                value={repoName}
-                onChange={(e) => setRepoName(e.target.value)}
-                className="flex-1 font-mono bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              />
-            </div>
+            <input
+              type="text"
+              required
+              pattern="[^/]+/[^/]+"
+              title="Enter the GitHub owner and repository, separated by a slash."
+              placeholder="owner/repository"
+              value={repoName}
+              onChange={(e) => setRepoName(e.target.value)}
+              className="w-full font-mono bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
           </div>
 
           {/* Live Deployment URL */}

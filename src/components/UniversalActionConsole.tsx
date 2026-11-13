@@ -52,12 +52,9 @@ export const UniversalActionConsole: React.FC<ActionConsoleProps> = ({
   const [editingStepNumber, setEditingStepNumber] = useState<number | null>(null);
   const [editedArgs, setEditedArgs] = useState<string>('');
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const [planningError, setPlanningError] = useState<string | null>(null);
   const [showConsoleStream, setShowConsoleStream] = useState<boolean>(true);
-  const [consoleLogs, setConsoleLogs] = useState<Array<{ time: string; level: string; msg: string }>>([
-    { time: '00:01:20', level: 'PLANNER', msg: 'Classified intent into 3 sequential atomic tool operations.' },
-    { time: '00:01:21', level: 'SANDBOX', msg: 'Local directory ~/Downloads validated against allowlist (Low Risk).' },
-    { time: '00:01:22', level: 'SECURITY', msg: 'Notion database write identified as Medium Risk -> Approval required.' },
-  ]);
+  const [consoleLogs, setConsoleLogs] = useState<Array<{ time: string; level: string; msg: string }>>([]);
 
   // Live timer simulation while a step is executing
   useEffect(() => {
@@ -75,32 +72,33 @@ export const UniversalActionConsole: React.FC<ActionConsoleProps> = ({
 
   const sampleWorkflows = [
     {
-      title: '⚡ Turbo Audit Portfolio & Sync to GitHub',
-      prompt: 'Audit tushar-portfolio-live.vercel.app, verify Vercel SSL and Schema.org Person JSON-LD, extract recent AI builds, and stage commit to tusharsolanki9845-dev/tushar-portfolio-vercel.',
+      title: 'Release checklist',
+      prompt: 'Draft a checklist for reviewing a web application before release.',
     },
     {
-      title: '🚀 Complete Outreach Engine in Webclient Hunter AI',
-      prompt: 'Audit Webclient Hunter AI repository, implement automated personalized outreach generator with sub-second latency, and stage GitHub PR with unit tests.',
+      title: 'Test suggestions',
+      prompt: 'Suggest focused tests for a TypeScript API client.',
     },
     {
-      title: '📑 Parse Invoice PDF in Downloads → Notion Expenses',
-      prompt: 'Find the invoice PDF in Downloads, extract the total, and add it to my Notion expenses database.',
-    },
-    {
-      title: '🔍 Scan Cursor & v0 Repos for Unfinished Tasks',
-      prompt: 'Inspect active projects across Cursor and v0.dev, extract incomplete milestones, and prioritize next sprint tasks with risk badges.',
-    },
-    {
-      title: '💬 Generate Standup PR Digest for Slack',
-      prompt: 'Query active merged PRs from GitHub, generate a 3-bullet sprint summary, and post to Slack #dev-updates.',
+      title: 'Workflow outline',
+      prompt: 'Outline safe approval steps for a workflow that changes external data.',
     },
   ];
 
   const handleExpandWithAdvancedLanguage = () => {
     const current = prompt.trim();
     if (!current) return;
-    const expanded = `[DIRECTIVE: EXECUTE FAST PARALLEL AUDIT] Target: "${current}". Preconditions: Enforce sandboxed file access (Low Risk), compute SHA-256 payload digests, isolate destructive writes to the Approval Queue with Before/After preview diffs, and return typed execution telemetry under 400ms.`;
+    const expanded = `${current}\n\nInclude prerequisites, failure cases, required approvals, and a verification checklist.`;
     setPrompt(expanded);
+  };
+
+  const handleGeneratePlan = () => {
+    setPlanningError(null);
+    try {
+      onGeneratePlan(prompt);
+    } catch (error) {
+      setPlanningError(error instanceof Error ? error.message : 'Workflow planning is unavailable.');
+    }
   };
 
   const handleRunSingleStep = async (stepNumber: number) => {
@@ -223,10 +221,10 @@ export const UniversalActionConsole: React.FC<ActionConsoleProps> = ({
               <span>Universal Action Console</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
-              Natural Language Intent to Standardized Tool Execution
+              Workflow planning
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-2xl">
-              Input natural language. OmniFlow decomposes the task into atomic steps, evaluates risk policies, and routes state writes to the approval queue.
+              Use AI Chat for workflow guidance. External tools, planning, and action execution are not configured in this build.
             </p>
           </div>
 
@@ -273,7 +271,7 @@ export const UniversalActionConsole: React.FC<ActionConsoleProps> = ({
               <span>⚡ Expand Directive</span>
             </button>
             <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">
-              Gemini 3.8 Flash Turbo
+              Gemini 2.5 Flash · configured by host
             </span>
           </div>
         </div>
@@ -284,23 +282,22 @@ export const UniversalActionConsole: React.FC<ActionConsoleProps> = ({
             onChange={(e) => setPrompt(e.target.value)}
             rows={2}
             className="flex-1 text-xs sm:text-[13px] bg-slate-50 dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700/80 rounded-xl p-3 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors placeholder-slate-400"
-            placeholder="e.g. Find the invoice PDF in Downloads, extract the total, and add it to my Notion expenses database."
+            placeholder="Describe the workflow you want help planning."
           />
           <button
-            onClick={() => {
-              const now = new Date().toTimeString().split(' ')[0];
-              setConsoleLogs((prev) => [
-                ...prev,
-                { time: now, level: 'PLANNER', msg: `Parsing intent: "${prompt.slice(0, 50)}..."` },
-              ]);
-              onGeneratePlan(prompt);
-            }}
+            onClick={handleGeneratePlan}
             className="px-5 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-indigo-500/20 whitespace-nowrap shrink-0"
           >
             <Sparkles className="w-4 h-4" />
-            <span>Decompose & Map Tools</span>
+            <span>Generate plan</span>
           </button>
         </div>
+
+        {planningError && (
+          <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+            {planningError}
+          </div>
+        )}
 
         {/* Preset chips */}
         <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center gap-2 flex-wrap">
@@ -310,7 +307,6 @@ export const UniversalActionConsole: React.FC<ActionConsoleProps> = ({
               key={idx}
               onClick={() => {
                 setPrompt(item.prompt);
-                onGeneratePlan(item.prompt);
               }}
               className="px-2.5 py-1 text-[11px] bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300 rounded-lg transition-colors truncate max-w-xs"
             >

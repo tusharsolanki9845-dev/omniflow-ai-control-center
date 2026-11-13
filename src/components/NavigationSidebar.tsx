@@ -268,7 +268,7 @@ export const NavigationSidebar: React.FC<SidebarProps> = ({
           </button>
         )}
 
-        {/* Deploy to Netlify / Nestify Button */}
+        {/* Hosting requirements */}
         {onOpenNetlifyDeploy && (
           <button
             onClick={() => {
@@ -281,10 +281,10 @@ export const NavigationSidebar: React.FC<SidebarProps> = ({
               <svg className="w-3.5 h-3.5 fill-current text-teal-400" viewBox="0 0 24 24">
                 <path d="M6.49 19.09h-.12a.68.68 0 0 1-.58-.69V5.6a.68.68 0 0 1 .58-.69h.12a.7.7 0 0 1 .6.35l7.91 13.83zm10.9-1.28l-4.1-7.17 4.1-7.17a.69.69 0 0 1 1.2 0l4.1 7.17-4.1 7.17a.69.69 0 0 1-1.2 0zM12 9.43L8.85 3.93a.7.7 0 0 1 .61-1.05h6.08a.7.7 0 0 1 .61 1.05L13 9.43a1.15 1.15 0 0 1-1 0z" />
               </svg>
-              <span>Netlify / Nestify</span>
+              <span>Hosting options</span>
             </div>
             <span className="text-[10px] font-mono text-teal-300 bg-teal-900/90 px-1.5 py-0.5 rounded border border-teal-700">
-              Edge
+              Info
             </span>
           </button>
         )}
@@ -308,29 +308,6 @@ export const NavigationSidebar: React.FC<SidebarProps> = ({
           </button>
         )}
 
-        {/* Tushar Solanki profile lockup */}
-        <div className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-100/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 text-xs">
-          <div className="w-8 h-8 rounded-full overflow-hidden bg-indigo-600 text-white flex items-center justify-center font-bold text-[11px] shrink-0 border border-slate-300 dark:border-slate-700 shadow-2xs">
-            <img
-              src="https://avatars.githubusercontent.com/u/286530512?v=4"
-              alt="Tushar Solanki"
-              referrerPolicy="no-referrer"
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLElement).style.display = 'none';
-              }}
-            />
-            <span className="hidden">TS</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="font-semibold text-slate-900 dark:text-slate-100 truncate text-[11px]">
-              Tushar Solanki
-            </div>
-            <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">
-              @tusharsolanki9845-dev
-            </div>
-          </div>
-        </div>
       </div>
     </>
   );

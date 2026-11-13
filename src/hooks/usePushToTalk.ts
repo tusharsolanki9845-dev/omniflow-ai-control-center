@@ -205,15 +205,16 @@ export function usePushToTalk({ onTranscriptComplete, autoSend = false }: UsePus
             }),
           });
 
-          let transcriptText = '';
           const isJson = response.headers.get('content-type')?.includes('application/json');
-          if (response.ok && isJson) {
-            const data = await response.json();
-            transcriptText = data.text || '';
+          const data = isJson ? await response.json() : {};
+          if (!response.ok) {
+            throw new Error(data.error || 'Speech transcription failed.');
           }
-
-          // If server returned text, use it; otherwise fallback to client speech recognition
-          const finalResult = transcriptText || localTranscript || 'Audit recent projects and stage updates to GitHub';
+          const transcriptText = typeof data.text === 'string' ? data.text.trim() : '';
+          const finalResult = transcriptText || localTranscript;
+          if (!finalResult) {
+            throw new Error('No speech was detected. Try again or type your prompt.');
+          }
 
           setIsTranscribing(false);
           if (onTranscriptComplete) {
@@ -221,13 +222,15 @@ export function usePushToTalk({ onTranscriptComplete, autoSend = false }: UsePus
           }
           resolve(finalResult);
         } catch (err: any) {
-          console.error('Transcription error:', err);
-          const fallback = interimTranscriptRef.current.trim() || 'Check connector status and run health checks';
+          const localTranscript = interimTranscriptRef.current.trim();
           setIsTranscribing(false);
-          if (onTranscriptComplete) {
-            onTranscriptComplete(fallback);
+          if (localTranscript) {
+            onTranscriptComplete?.(localTranscript);
+            resolve(localTranscript);
+            return;
           }
-          resolve(fallback);
+          setError(err instanceof Error ? err.message : 'Speech transcription failed.');
+          resolve('');
         }
       };
 

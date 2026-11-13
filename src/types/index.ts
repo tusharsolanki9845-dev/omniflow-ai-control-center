@@ -130,7 +130,7 @@ export interface ChatMessage {
   tokenStats?: {
     promptTokens: number;
     completionTokens: number;
-    totalCost: number;
+    totalCost?: number;
     latencyMs: number;
   };
   modelId?: string;

@@ -50,9 +50,6 @@ export default function App() {
     deleteAutomation,
     triggerAutomation,
     toggleProjectTask,
-    syncProject,
-    syncAllWithGitHubAPI,
-    stageProjectTaskCode,
     addProject,
     updateGatewaySettings,
     resetToDefaults,
@@ -257,15 +254,7 @@ export default function App() {
             <ProjectsHubView
               projects={state.projects}
               onToggleTask={toggleProjectTask}
-              onSyncProject={syncProject}
-              onStageTaskCode={stageProjectTaskCode}
-              onOpenActionConsoleWithPrompt={(prompt) => {
-                generatePlanFromIntent(prompt);
-                setActiveTab('actions');
-              }}
-              onOpenApprovals={() => setActiveTab('approvals')}
               onAddProject={addProject}
-              onSyncAllGitHub={syncAllWithGitHubAPI}
               onOpenGitHubUpload={() => setIsGitHubModalOpen(true)}
               onOpenApkModal={() => setIsApkModalOpen(true)}
               onOpenVercelDeploy={() => setIsVercelModalOpen(true)}
@@ -286,51 +275,7 @@ export default function App() {
 
           {activeTab === 'actions' && (
             <UniversalActionConsole
-              planSteps={
-                state.currentPlanSteps.length > 0
-                  ? state.currentPlanSteps
-                  : [
-                      {
-                        stepNumber: 1,
-                        title: 'Inspect sandboxed Downloads directory for invoice files',
-                        toolId: 'tool-local-list-files',
-                        toolName: 'local_agent.list_files',
-                        connectionProvider: 'local_agent',
-                        arguments: { directory: '~/Downloads', pattern: '*.pdf' },
-                        riskLevel: 'safe',
-                        status: 'completed',
-                        requiresApproval: false,
-                        result: { files: ['invoice_acme_q3.pdf'] },
-                      },
-                      {
-                        stepNumber: 2,
-                        title: 'Extract total, vendor, and line items from invoice_acme_q3.pdf',
-                        toolId: 'tool-local-extract-pdf',
-                        toolName: 'local_agent.extract_pdf_data',
-                        connectionProvider: 'local_agent',
-                        arguments: { filePath: '~/Downloads/invoice_acme_q3.pdf', targetFields: 'vendor, total, date, invoiceNumber' },
-                        riskLevel: 'safe',
-                        status: 'completed',
-                        requiresApproval: false,
-                        result: { vendor: 'Acme Cloud Services', total: 1429.5, currency: 'USD', invoiceNumber: 'INV-2026-9842' },
-                      },
-                      {
-                        stepNumber: 3,
-                        title: 'Create Notion expense entry for Acme Cloud ($1,429.50)',
-                        toolId: 'tool-notion-create-page',
-                        toolName: 'notion.create_database_page',
-                        connectionProvider: 'notion',
-                        arguments: {
-                          database: 'Notion Expenses 2026',
-                          properties: { Vendor: 'Acme Cloud Services', Amount: 1429.5, Currency: 'USD', Date: '2026-11-04' },
-                        },
-                        riskLevel: 'elevated',
-                        status: 'waiting_approval',
-                        requiresApproval: true,
-                        result: { message: 'Action enqueued in Approval Queue for 1-click confirmation.' },
-                      },
-                    ]
-              }
+              planSteps={[]}
               onGeneratePlan={generatePlanFromIntent}
               onExecuteStep={executePlanStep}
               onOpenApprovals={() => setActiveTab('approvals')}
@@ -517,19 +462,16 @@ export default function App() {
         onClose={() => setIsGitHubModalOpen(false)}
       />
 
-      {/* Vercel Production Deployment Modal */}
+      {/* Vercel hosting requirements */}
       <VercelDeployModal
         isOpen={isVercelModalOpen}
         onClose={() => setIsVercelModalOpen(false)}
-        onOpenGitHubModal={() => setIsGitHubModalOpen(true)}
       />
 
-      {/* Netlify / Nestify Production Deployment Modal */}
+      {/* Hosting requirements */}
       <NetlifyDeployModal
         isOpen={isNetlifyModalOpen}
         onClose={() => setIsNetlifyModalOpen(false)}
-        onOpenGitHubModal={() => setIsGitHubModalOpen(true)}
-        onOpenVercelModal={() => setIsVercelModalOpen(true)}
       />
 
       {/* Google Drive Direct Project Upload & Backup Modal */}

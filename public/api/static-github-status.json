@@ -1,8 +1,0 @@
-{
-  "initialized": true,
-  "commitHash": "5435b46",
-  "branch": "main",
-  "lastCommitMessage": "feat: implement global notification system for completed, failed, and urgent approval tasks",
-  "commitCount": 1,
-  "repoArchiveUrl": "/omniflow-source-v1.2.zip"
-}

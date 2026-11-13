@@ -36,6 +36,14 @@ import {
 import { notificationSound } from '../utils/notificationSound';
 
 const STORAGE_KEY = 'omniflow_state_v1.1';
+const DEFAULT_CONNECTIONS: Connection[] = INITIAL_CONNECTIONS.map((connection) => ({
+  ...connection,
+  status: 'disconnected',
+  isEnabled: false,
+  lastTestedAt: undefined,
+  latencyMs: undefined,
+  description: 'Example integration configuration; live authorization is not set up.',
+}));
 
 export interface OmniFlowState {
   models: ModelConfig[];
@@ -60,7 +68,7 @@ function getInitialState(): OmniFlowState {
   if (typeof window === 'undefined') {
     return {
       models: INITIAL_MODELS,
-      connections: INITIAL_CONNECTIONS,
+      connections: DEFAULT_CONNECTIONS,
       tools: INITIAL_TOOLS,
       actions: INITIAL_ACTIONS,
       auditLogs: INITIAL_AUDIT_LOGS,
@@ -95,20 +103,43 @@ function getInitialState(): OmniFlowState {
       ];
 
       return {
-        models: parsed.models || INITIAL_MODELS,
-        connections: parsed.connections || INITIAL_CONNECTIONS,
+        models: INITIAL_MODELS,
+        connections: (parsed.connections || DEFAULT_CONNECTIONS).map((connection: Connection) => ({
+          ...connection,
+          status: 'disconnected',
+          isEnabled: false,
+          lastTestedAt: undefined,
+          latencyMs: undefined,
+        })),
         tools: parsed.tools || INITIAL_TOOLS,
         actions: parsed.actions || INITIAL_ACTIONS,
         auditLogs: mergedAuditLogs.length ? mergedAuditLogs : INITIAL_AUDIT_LOGS,
         localFiles: parsed.localFiles || INITIAL_LOCAL_FILES,
-        localAgent: parsed.localAgent || INITIAL_LOCAL_AGENT,
-        automations: parsed.automations || INITIAL_AUTOMATIONS,
+        localAgent: {
+          ...(parsed.localAgent || INITIAL_LOCAL_AGENT),
+          status: 'disconnected',
+          tunnelEndpoint: '',
+          port: 0,
+          sandboxed: false,
+          allowedDirectories: [],
+          allowlistCommands: [],
+          cpuUsagePct: 0,
+          memoryUsageMb: 0,
+          uptimeSeconds: 0,
+        },
+        automations: (parsed.automations || INITIAL_AUTOMATIONS).map((automation: Automation) => ({
+          ...automation,
+          isEnabled: false,
+          lastRun: undefined,
+          lastStatus: undefined,
+          totalRuns: 0,
+        })),
         projects: parsed.projects || INITIAL_PROJECTS,
         gatewaySettings: parsed.gatewaySettings || INITIAL_GATEWAY_SETTINGS,
         conversations: parsed.conversations || [INITIAL_CONVERSATION],
         activeConversationId: parsed.activeConversationId || INITIAL_CONVERSATION.id,
         messages: parsed.messages || INITIAL_MESSAGES,
-        currentPlanSteps: parsed.currentPlanSteps || [],
+        currentPlanSteps: [],
         notifications: mergedNotifications.length ? mergedNotifications : INITIAL_NOTIFICATIONS,
         notificationSoundEnabled: parsed.notificationSoundEnabled !== undefined ? parsed.notificationSoundEnabled : true,
       };
@@ -119,7 +150,7 @@ function getInitialState(): OmniFlowState {
 
   return {
     models: INITIAL_MODELS,
-    connections: INITIAL_CONNECTIONS,
+    connections: DEFAULT_CONNECTIONS,
     tools: INITIAL_TOOLS,
     actions: INITIAL_ACTIONS,
     auditLogs: INITIAL_AUDIT_LOGS,
@@ -314,25 +345,9 @@ export function useOmniFlowStore() {
 
   // Connectors
   const testConnection = async (connectionId: string) => {
-    const start = performance.now();
-    await new Promise((r) => setTimeout(r, 400 + Math.random() * 300));
-    const latency = Math.round(performance.now() - start);
-
-    setState((prev) => {
-      const updated = prev.connections.map((c) => {
-        if (c.id === connectionId) {
-          return {
-            ...c,
-            status: 'connected' as const,
-            latencyMs: latency,
-            lastTestedAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
-          };
-        }
-        return c;
-      });
-
-      return { ...prev, connections: updated };
-    });
+    const connection = state.connections.find((item) => item.id === connectionId);
+    if (!connection) throw new Error('Connector was not found.');
+    throw new Error(`Live health checks are not configured for ${connection.name}.`);
   };
 
   const toggleConnection = (connectionId: string, isEnabled: boolean) => {
@@ -350,326 +365,12 @@ export function useOmniFlowStore() {
   };
 
   // Plan Decomposition in Action Console
-  const generatePlanFromIntent = (prompt: string) => {
-    const lower = prompt.toLowerCase();
-    const steps: ActionPlanStep[] = [];
-
-    if (lower.includes('portfolio') || lower.includes('vercel')) {
-      steps.push({
-        stepNumber: 1,
-        title: 'Probe live deployment at tushar-portfolio-live.vercel.app',
-        toolId: 'tool-brave-web-search',
-        toolName: 'http_client.audit_endpoint',
-        connectionProvider: 'brave_search',
-        arguments: {
-          url: 'https://tushar-portfolio-live.vercel.app',
-          assertStatus: 200,
-          validateSchema: 'Person JSON-LD',
-        },
-        riskLevel: 'safe',
-        status: 'pending',
-        requiresApproval: false,
-      });
-      steps.push({
-        stepNumber: 2,
-        title: 'Synthesize verified project showcase diff from active AI repositories',
-        toolId: 'tool-local-list-files',
-        toolName: 'llm.generate_code_patch',
-        connectionProvider: 'litellm',
-        arguments: {
-          targetFile: 'src/data/portfolioData.ts',
-          newBuilds: ['Webclient Hunter AI', 'AI Duniya', 'AlphaTech Solutions', 'ProctorX'],
-        },
-        riskLevel: 'safe',
-        status: 'pending',
-        requiresApproval: false,
-      });
-      steps.push({
-        stepNumber: 3,
-        title: 'Stage commit to tusharsolanki9845-dev/tushar-portfolio-vercel',
-        toolId: 'tool-github-commit',
-        toolName: 'github.create_commit',
-        connectionProvider: 'github',
-        arguments: {
-          repo: 'tusharsolanki9845-dev/tushar-portfolio-vercel',
-          branch: 'main',
-          message: 'chore: sync verified 2026 AI builds and technical milestones',
-        },
-        riskLevel: 'elevated',
-        status: 'pending',
-        requiresApproval: true,
-      });
-    } else if (lower.includes('hunter') || lower.includes('outreach')) {
-      steps.push({
-        stepNumber: 1,
-        title: 'Inspect Webclient-hunter-ai repo structure & lead schema',
-        toolId: 'tool-brave-web-search',
-        toolName: 'github.get_repository_tree',
-        connectionProvider: 'github',
-        arguments: { repo: 'tusharsolanki9845-dev/Webclient-hunter-ai', path: 'src/services' },
-        riskLevel: 'safe',
-        status: 'pending',
-        requiresApproval: false,
-      });
-      steps.push({
-        stepNumber: 2,
-        title: 'Generate personalized outreach engine with sub-second latency',
-        toolId: 'tool-local-list-files',
-        toolName: 'llm.generate_code_patch',
-        connectionProvider: 'litellm',
-        arguments: { target: 'src/services/outreachEngine.ts', model: 'gemini-3.8-flash' },
-        riskLevel: 'safe',
-        status: 'pending',
-        requiresApproval: false,
-      });
-      steps.push({
-        stepNumber: 3,
-        title: 'Open Pull Request: feature/outreach-generator on GitHub',
-        toolId: 'tool-github-commit',
-        toolName: 'github.create_pull_request',
-        connectionProvider: 'github',
-        arguments: {
-          repo: 'tusharsolanki9845-dev/Webclient-hunter-ai',
-          head: 'feature/outreach-generator',
-          base: 'main',
-          title: 'feat: automated personalized outreach engine',
-        },
-        riskLevel: 'elevated',
-        status: 'pending',
-        requiresApproval: true,
-      });
-    } else if (lower.includes('cursor') || lower.includes('v0') || lower.includes('audit') || lower.includes('scan')) {
-      steps.push({
-        stepNumber: 1,
-        title: 'Query active milestones across all 5 AI repositories',
-        toolId: 'tool-brave-web-search',
-        toolName: 'github.list_repository_issues',
-        connectionProvider: 'github',
-        arguments: { user: 'tusharsolanki9845-dev', state: 'open' },
-        riskLevel: 'safe',
-        status: 'pending',
-        requiresApproval: false,
-      });
-      steps.push({
-        stepNumber: 2,
-        title: 'Compile prioritized sprint roadmap with risk levels',
-        toolId: 'tool-brave-web-search',
-        toolName: 'llm.synthesize_summary',
-        connectionProvider: 'litellm',
-        arguments: { strategy: 'high-impact ready-to-ship first' },
-        riskLevel: 'safe',
-        status: 'pending',
-        requiresApproval: false,
-      });
-      steps.push({
-        stepNumber: 3,
-        title: 'Sync sprint roadmap to GitHub Project Board',
-        toolId: 'tool-github-commit',
-        toolName: 'github.update_project_board',
-        connectionProvider: 'github',
-        arguments: { board: 'OmniFlow 2026 AI Sprint' },
-        riskLevel: 'elevated',
-        status: 'pending',
-        requiresApproval: true,
-      });
-    } else if (lower.includes('invoice') || lower.includes('pdf') || lower.includes('notion')) {
-      steps.push({
-        stepNumber: 1,
-        title: 'Inspect sandboxed Downloads directory for invoice files',
-        toolId: 'tool-local-list-files',
-        toolName: 'local_agent.list_files',
-        connectionProvider: 'local_agent',
-        arguments: { directory: '~/Downloads', pattern: '*.pdf' },
-        riskLevel: 'safe',
-        status: 'pending',
-        requiresApproval: false,
-      });
-      steps.push({
-        stepNumber: 2,
-        title: 'Extract total, vendor, and line items from invoice_acme_q3.pdf',
-        toolId: 'tool-local-extract-pdf',
-        toolName: 'local_agent.extract_pdf_data',
-        connectionProvider: 'local_agent',
-        arguments: { filePath: '~/Downloads/invoice_acme_q3.pdf', targetFields: 'vendor, total, date, invoiceNumber' },
-        riskLevel: 'safe',
-        status: 'pending',
-        requiresApproval: false,
-      });
-      steps.push({
-        stepNumber: 3,
-        title: 'Create Notion expense entry for Acme Cloud ($1,429.50)',
-        toolId: 'tool-notion-create-page',
-        toolName: 'notion.create_database_page',
-        connectionProvider: 'notion',
-        arguments: {
-          database: 'Notion Expenses 2026',
-          properties: { Vendor: 'Acme Cloud Services', Amount: 1429.5, Currency: 'USD', Date: '2026-11-04' },
-        },
-        riskLevel: 'elevated',
-        status: 'pending',
-        requiresApproval: true,
-      });
-    } else if (lower.includes('slack') || lower.includes('summary') || lower.includes('pr')) {
-      steps.push({
-        stepNumber: 1,
-        title: 'Retrieve merged pull requests from GitHub repository',
-        toolId: 'tool-brave-web-search',
-        toolName: 'github.list_pull_requests',
-        connectionProvider: 'github',
-        arguments: { repo: 'omniflow/gateway-core', state: 'merged', since: '24h' },
-        riskLevel: 'safe',
-        status: 'pending',
-        requiresApproval: false,
-      });
-      steps.push({
-        stepNumber: 2,
-        title: 'Draft sprint release briefing and changelog',
-        toolId: 'tool-brave-web-search',
-        toolName: 'llm.synthesize_summary',
-        connectionProvider: 'litellm',
-        arguments: { focus: 'developer impact & security updates' },
-        riskLevel: 'safe',
-        status: 'pending',
-        requiresApproval: false,
-      });
-      steps.push({
-        stepNumber: 3,
-        title: 'Broadcast briefing to #dev-updates Slack channel',
-        toolId: 'tool-slack-post-message',
-        toolName: 'slack.post_message',
-        connectionProvider: 'slack',
-        arguments: { channel: '#dev-updates', text: 'Daily Standup & Merged PR Digest' },
-        riskLevel: 'elevated',
-        status: 'pending',
-        requiresApproval: true,
-      });
-    } else {
-      // General 2-step plan
-      steps.push({
-        stepNumber: 1,
-        title: 'Query connected services and context sources',
-        toolId: 'tool-brave-web-search',
-        toolName: 'brave_search.query',
-        connectionProvider: 'brave_search',
-        arguments: { query: prompt },
-        riskLevel: 'safe',
-        status: 'pending',
-        requiresApproval: false,
-      });
-      steps.push({
-        stepNumber: 2,
-        title: 'Format response and propose structured follow-up action',
-        toolId: 'tool-local-list-files',
-        toolName: 'local_agent.list_files',
-        connectionProvider: 'local_agent',
-        arguments: { directory: '~/Downloads' },
-        riskLevel: 'safe',
-        status: 'pending',
-        requiresApproval: false,
-      });
-    }
-
-    setState((prev) => ({ ...prev, currentPlanSteps: steps }));
+  const generatePlanFromIntent = (_prompt: string) => {
+    throw new Error('Live tool planning is not configured in this build.');
   };
 
-  const executePlanStep = async (stepNumber: number) => {
-    setState((prev) => ({
-      ...prev,
-      currentPlanSteps: prev.currentPlanSteps.map((s) =>
-        s.stepNumber === stepNumber ? { ...s, status: 'running' } : s
-      ),
-    }));
-
-    await new Promise((r) => setTimeout(r, 600));
-
-    setState((prev) => {
-      const step = prev.currentPlanSteps.find((s) => s.stepNumber === stepNumber);
-      if (!step) return prev;
-
-      let nextStatus: ActionPlanStep['status'] = 'completed';
-      let resultData: any = { status: 'OK', recordsFound: 1 };
-
-      if (step.requiresApproval) {
-        nextStatus = 'waiting_approval';
-        const actId = `act-${Date.now().toString(36)}`;
-        resultData = {
-          message: 'Paused for security: Destructive or external write requires manual confirmation in Approval Queue.',
-          queuedActionId: actId,
-        };
-
-        // Create an approval queue entry
-        const newAction: Action = {
-          id: actId,
-          userId: 'user-tushar',
-          promptIntent: step.title,
-          toolId: step.toolId,
-          toolName: step.toolName,
-          provider: step.connectionProvider,
-          arguments: step.arguments,
-          status: 'pending_approval',
-          approvalRequired: true,
-          riskLevel: step.riskLevel,
-          targetResource: `${step.connectionProvider.toUpperCase()} / Resource`,
-          diffPreview: {
-            before: '(No prior state)',
-            after: step.arguments,
-            summary: `Automated plan execution step #${step.stepNumber}: ${step.title}`,
-          },
-          createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
-        };
-
-        const newNotif: NotificationItem = {
-          id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-          title: 'Urgent Manual Approval Required',
-          message: `Plan step #${step.stepNumber} "${step.title}" requires confirmation before execution.`,
-          type: 'APPROVAL_REQUIRED',
-          priority: 'urgent',
-          timestamp: new Date().toISOString(),
-          read: false,
-          actionLabel: 'Review in Approvals',
-          actionTab: 'approvals',
-          relatedEntityId: actId,
-        };
-
-        if (prev.notificationSoundEnabled) {
-          notificationSound.playApprovalRequired();
-        }
-
-        return {
-          ...prev,
-          notifications: [newNotif, ...prev.notifications],
-          actions: [newAction, ...prev.actions],
-          currentPlanSteps: prev.currentPlanSteps.map((s) =>
-            s.stepNumber === stepNumber ? { ...s, status: nextStatus, result: resultData } : s
-          ),
-        };
-      }
-
-      // Completed safely
-      const completedNotif: NotificationItem = {
-        id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        title: 'Automated Task Completed',
-        message: `Plan step #${step.stepNumber} "${step.title}" executed safely in 160ms.`,
-        type: 'TASK_COMPLETED',
-        priority: 'low',
-        timestamp: new Date().toISOString(),
-        read: false,
-        actionLabel: 'View Audit Ledger',
-        actionTab: 'audit',
-      };
-
-      if (prev.notificationSoundEnabled) {
-        notificationSound.playTaskCompleted();
-      }
-
-      return {
-        ...prev,
-        notifications: [completedNotif, ...prev.notifications],
-        currentPlanSteps: prev.currentPlanSteps.map((s) =>
-          s.stepNumber === stepNumber ? { ...s, status: nextStatus, result: resultData } : s
-        ),
-      };
-    });
+  const executePlanStep = async (_stepNumber: number) => {
+    throw new Error('Live tool execution is not configured in this build.');
   };
 
   // Chat sending
@@ -691,82 +392,42 @@ export function useOmniFlowStore() {
       messages: [...prev.messages, userMsg],
     }));
 
-    // Server or simulated LLM response
-    const selectedModel = state.models.find((m) => m.id === modelId) || state.models[0];
-    const isReasoning = selectedModel.capabilities.includes('reasoning');
-
-    let assistantText = '';
-    let reasoning = '';
-    let toolCalls: ChatMessage['toolCalls'] = undefined;
-
-    const lower = content.toLowerCase();
-
-    if (lower.includes('invoice') || (lower.includes('downloads') && lower.includes('notion'))) {
-      assistantText = `I analyzed your request against current security rules.\n\n1. Found **invoice_acme_q3.pdf** ($1,429.50) in \`~/Downloads\` via Local Agent.\n2. Formatted a structured database insertion payload.\n3. **Elevated Risk**: Because writing to your Notion database modifies external workspace state, I queued the write action in your **Approval Queue**.\n\nPlease inspect the preview diff and click Approve to proceed.`;
-      reasoning = `Goal: Extract invoice and write to Notion.\nPlan: Check folder permissions -> parse PDF -> formulate Notion row -> gate behind Approval Queue.\nRisk Assessment: Local read = SAFE; Notion write = ELEVATED. Default-deny policy applied.`;
-      toolCalls = [
-        {
-          id: 'call-1',
-          toolName: 'local_agent.list_files',
-          args: { directory: '~/Downloads', pattern: '*.pdf' },
-          result: { files: ['invoice_acme_q3.pdf'] },
-          status: 'success',
-        },
-        {
-          id: 'call-2',
-          toolName: 'local_agent.extract_pdf_data',
-          args: { filePath: '~/Downloads/invoice_acme_q3.pdf' },
-          result: { vendor: 'Acme Cloud', total: 1429.5, invoiceId: 'INV-2026-9842' },
-          status: 'success',
-        },
-        {
-          id: 'call-3',
-          toolName: 'notion.create_database_page',
-          args: { database: 'Notion Expenses 2026', amount: 1429.5 },
-          status: 'requires_approval',
-        },
-      ];
-    } else if (lower.includes('status') || lower.includes('connectors') || lower.includes('health')) {
-      const activeCount = state.connections.filter((c) => c.status === 'connected').length;
-      assistantText = `**OmniFlow System Health & Connector Status**\n\n- **Active Connectors**: ${activeCount} of ${state.connections.length} online.\n- **Local Agent**: Connected at \`http://127.0.0.1:8006\` (WireGuard sandboxed, ${state.localAgent.allowedDirectories.length} allowed folders).\n- **Primary Gateway**: ${state.gatewaySettings.primaryGateway.toUpperCase()} Proxy.\n- **Pending Approvals**: ${state.actions.filter((a) => a.status === 'pending_approval').length} action(s) awaiting your review.`;
-      reasoning = `Checking status of all connected tools, local tunnel health, and security guardrail statistics.`;
-    } else {
-      assistantText = `OmniFlow Gateway processed your query through **${selectedModel.name}**.\n\nI can execute tasks across your connected cloud tools (Notion, Gmail, Slack, Drive), Model Context Protocol (MCP) servers, and your sandboxed local device agent with strict policy enforcement.`;
-      if (isReasoning) {
-        reasoning = `Query evaluated: "${content.substring(0, 40)}...". Model Context Protocol schemas inspected. Safe execution path verified.`;
-      }
+    const startedAt = performance.now();
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: content, systemPrompt }),
+    });
+    let result: { error?: string; text?: string; usage?: { promptTokens?: number; completionTokens?: number }; model?: string };
+    try {
+      result = await response.json();
+    } catch {
+      throw new Error('The chat service returned an invalid response.');
     }
-
-    const promptTokens = Math.floor(content.length / 3) + 120;
-    const completionTokens = Math.floor(assistantText.length / 3) + (reasoning ? 100 : 0);
-    const cost =
-      (promptTokens / 1000) * selectedModel.costPer1kInput +
-      (completionTokens / 1000) * selectedModel.costPer1kOutput;
+    if (!response.ok) {
+      throw new Error(result.error || 'The chat request failed.');
+    }
+    if (typeof result.text !== 'string' || !result.text.trim()) {
+      throw new Error('The AI provider returned an empty response.');
+    }
 
     const botMsg: ChatMessage = {
       id: `msg-${(Date.now() + 1).toString(36)}`,
       conversationId: state.activeConversationId,
       role: 'assistant',
-      content: assistantText,
-      reasoning: isReasoning ? reasoning : undefined,
-      toolCalls,
+      content: result.text,
       tokenStats: {
-        promptTokens,
-        completionTokens,
-        totalCost: Number(cost.toFixed(6)),
-        latencyMs: selectedModel.latencyAvgMs + Math.floor(Math.random() * 40),
+        promptTokens: result.usage?.promptTokens ?? 0,
+        completionTokens: result.usage?.completionTokens ?? 0,
+        latencyMs: Math.round(performance.now() - startedAt),
       },
-      modelId,
+      modelId: result.model || modelId,
       createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
     };
 
     setState((prev) => ({
       ...prev,
       messages: [...prev.messages, botMsg],
-      gatewaySettings: {
-        ...prev.gatewaySettings,
-        currentMonthSpendUsd: Number((prev.gatewaySettings.currentMonthSpendUsd + cost).toFixed(4)),
-      },
     }));
   };
 
@@ -784,7 +445,7 @@ export function useOmniFlowStore() {
   const addAutomation = (automation: Automation) => {
     setState((prev) => ({
       ...prev,
-      automations: [automation, ...prev.automations],
+      automations: [{ ...automation, isEnabled: false, lastRun: undefined, lastStatus: undefined, totalRuns: 0 }, ...prev.automations],
     }));
   };
 
@@ -795,88 +456,8 @@ export function useOmniFlowStore() {
     }));
   };
 
-  const triggerAutomation = async (id: string) => {
-    const targetAuto = state.automations.find((a) => a.id === id);
-    const autoName = targetAuto ? targetAuto.name : 'Automated Task';
-
-    let nextStatus: 'success' | 'waiting_approval' | 'failed' = 'success';
-    let notifType: NotificationType = 'TASK_COMPLETED';
-    let notifPriority: NotificationPriority = 'medium';
-    let notifTitle = `Automated Task Completed`;
-    let notifMsg = `"${autoName}" executed all configured steps cleanly.`;
-    let notifTab = 'automations';
-    let actId: string | undefined = undefined;
-
-    if (id === 'auto-01') {
-      // Invoice ingestion triggers a sensitive Notion database write that requires manual approval
-      nextStatus = 'waiting_approval';
-      notifType = 'APPROVAL_REQUIRED';
-      notifPriority = 'urgent';
-      actId = `act-${Date.now().toString(36)}`;
-      notifTitle = 'Urgent Manual Approval Required';
-      notifMsg = `"${autoName}" parsed invoice data and queued an external Notion CRM insertion.`;
-      notifTab = 'approvals';
-
-      const queuedAction: Action = {
-        id: actId,
-        userId: 'user-tushar',
-        promptIntent: `Ingest Acme Cloud invoice into Notion Expenses`,
-        toolId: 'tool-notion-create-page',
-        toolName: 'notion.create_database_page',
-        provider: 'notion',
-        arguments: { database: 'Notion Expenses 2026', vendor: 'Acme Cloud Services', amount: 1429.5 },
-        status: 'pending_approval',
-        approvalRequired: true,
-        riskLevel: 'elevated',
-        targetResource: 'Notion / Database',
-        diffPreview: {
-          summary: 'Append row: Acme Cloud Services ($1,429.50) [Automated ingestion]',
-        },
-        createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      };
-
-      setState((prev) => ({
-        ...prev,
-        actions: [queuedAction, ...prev.actions],
-      }));
-    } else {
-      notifTitle = `Automated Task Completed`;
-      notifMsg = `"${autoName}" completed in 210ms with zero policy errors.`;
-    }
-
-    const newNotif: NotificationItem = {
-      id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      title: notifTitle,
-      message: notifMsg,
-      type: notifType,
-      priority: notifPriority,
-      timestamp: new Date().toISOString(),
-      read: false,
-      actionLabel: notifType === 'APPROVAL_REQUIRED' ? 'Review in Approvals' : 'View in Automations',
-      actionTab: notifTab,
-      relatedEntityId: actId || id,
-    };
-
-    if (state.notificationSoundEnabled) {
-      if (notifType === 'APPROVAL_REQUIRED') notificationSound.playApprovalRequired();
-      else if (notifType === 'TASK_COMPLETED') notificationSound.playTaskCompleted();
-      else notificationSound.playTaskFailed();
-    }
-
-    setState((prev) => ({
-      ...prev,
-      notifications: [newNotif, ...prev.notifications],
-      automations: prev.automations.map((a) =>
-        a.id === id
-          ? {
-              ...a,
-              totalRuns: a.totalRuns + 1,
-              lastRun: new Date().toISOString().replace('T', ' ').substring(0, 19),
-              lastStatus: nextStatus,
-            }
-          : a
-      ),
-    }));
+  const triggerAutomation = async (_id: string) => {
+    throw new Error('Automation execution is not configured in this build.');
   };
 
   const toggleProjectTask = (projectId: string, taskId: string) => {
@@ -898,91 +479,6 @@ export function useOmniFlowStore() {
         return p;
       }),
     }));
-  };
-
-  const syncProject = async (projectId: string) => {
-    await new Promise((r) => setTimeout(r, 600));
-    setState((prev) => ({
-      ...prev,
-      projects: prev.projects.map((p) =>
-        p.id === projectId
-          ? { ...p, lastSyncedAt: new Date().toISOString().replace('T', ' ').substring(0, 19) }
-          : p
-      ),
-    }));
-  };
-
-  const syncAllWithGitHubAPI = async () => {
-    try {
-      const res = await fetch('https://api.github.com/users/tusharsolanki9845-dev/repos');
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setState((prev) => ({
-            ...prev,
-            projects: prev.projects.map((p) => {
-              const remote = data.find(
-                (r: any) => r.name.toLowerCase() === p.repoName.toLowerCase()
-              );
-              return {
-                ...p,
-                description: (remote && remote.description) || p.description,
-                lastSyncedAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
-              };
-            }),
-          }));
-          return { success: true, count: data.length };
-        }
-      }
-    } catch (e) {
-      console.warn('GitHub API offline or rate-limited; applied local sync timestamp:', e);
-    }
-
-    setState((prev) => ({
-      ...prev,
-      projects: prev.projects.map((p) => ({
-        ...p,
-        lastSyncedAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      })),
-    }));
-    return { success: true, count: 5 };
-  };
-
-  const stageProjectTaskCode = (projectId: string, taskTitle: string) => {
-    setState((prev) => {
-      const proj = prev.projects.find((p) => p.id === projectId);
-      if (!proj) return prev;
-
-      const newAction: Action = {
-        id: `act-code-${Date.now().toString(36)}`,
-        userId: 'tushar-solanki',
-        promptIntent: `Complete task: "${taskTitle}" for project ${proj.name}`,
-        toolId: 'tool-github-commit',
-        toolName: 'github.create_commit',
-        provider: 'github',
-        arguments: {
-          repo: proj.repoName,
-          branch: 'feature/task-completion',
-          commitMessage: `feat: implement ${taskTitle}`,
-          filesModified: ['src/components/Feature.tsx', 'src/types.ts'],
-        },
-        status: 'pending_approval',
-        approvalRequired: true,
-        riskLevel: 'elevated',
-        targetResource: `GitHub / ${proj.repoName} (Branch: feature/task-completion)`,
-        diffPreview: {
-          before: '// Pending feature implementation',
-          after: `+ // Implemented: ${taskTitle}\n+ export function executeFeature() { return { status: 'COMPLETE' }; }`,
-          summary: `Commit and push changes for "${taskTitle}" to ${proj.repoName}`,
-        },
-        createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      };
-
-      return {
-        ...prev,
-        actions: [newAction, ...prev.actions],
-      };
-    });
   };
 
   const addProject = (project: AIProject) => {
@@ -1129,7 +625,7 @@ export function useOmniFlowStore() {
     localStorage.removeItem(STORAGE_KEY);
     setState({
       models: INITIAL_MODELS,
-      connections: INITIAL_CONNECTIONS,
+      connections: DEFAULT_CONNECTIONS,
       tools: INITIAL_TOOLS,
       actions: INITIAL_ACTIONS,
       auditLogs: INITIAL_AUDIT_LOGS,
@@ -1165,9 +661,6 @@ export function useOmniFlowStore() {
     deleteAutomation,
     triggerAutomation,
     toggleProjectTask,
-    syncProject,
-    syncAllWithGitHubAPI,
-    stageProjectTaskCode,
     addProject,
     updateGatewaySettings,
     resetToDefaults,

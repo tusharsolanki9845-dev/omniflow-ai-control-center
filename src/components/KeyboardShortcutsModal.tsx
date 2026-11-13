@@ -189,8 +189,8 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
       },
       {
         id: 'netlify-modal',
-        title: 'Deploy to Netlify / Nestify',
-        description: '1-click deploy to Netlify edge or Nestify.io cloud cluster',
+        title: 'Hosting requirements',
+        description: 'View Node.js and container hosting requirements',
         keys: ['L'],
         category: 'global',
         actionName: 'Deploy Netlify',
@@ -201,8 +201,8 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
       },
       {
         id: 'github-modal',
-        title: 'Push to GitHub Repository',
-        description: 'Upload source code and sync commits to @tusharsolanki9845-dev',
+        title: 'View GitHub repository',
+        description: 'Open the OmniFlow repository and source archive',
         keys: ['G'],
         category: 'global',
         actionName: 'Push GitHub',

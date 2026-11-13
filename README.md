@@ -42,13 +42,11 @@ docker run --rm -p 3000:3000 -e GEMINI_API_KEY=your-key omniflow
 
 The service health endpoint is `GET /api/health`.
 
-## Deploy a free preview on Render
+## Deploy on Vercel
 
-The included `render.yaml` configures a Docker web service with `/api/health` as its health check. In Render, create a new Blueprint from this GitHub repository and choose the Free plan. Set `GEMINI_API_KEY` as a secret in the Render dashboard; do not commit it to the repository.
+Import this GitHub repository into a Vercel project. The Vite build publishes the frontend from `dist`, while `api/[...path].ts` exposes the Express API as a Vercel Function. Add `GEMINI_API_KEY` as an environment variable in the Vercel project settings; do not commit it.
 
-Render's Free web services spin down after 15 minutes without traffic, can take about a minute to wake, have ephemeral storage, and may be restarted or suspended when included usage limits are reached. Render states that Free instances are not intended for production applications. Use this option for a no-cost demo, not a production service with uptime or data-persistence requirements.
-
-OmniFlow stores workspace data in the visitor's browser. The Express backend is required for chat, transcription, and system health endpoints; static-only hosting will not provide those APIs.
+Vercel's free Hobby plan has usage and eligibility limits and is not intended for commercial production use. Review the current plan limits before using the public deployment for a business or service requiring production-level availability. OmniFlow keeps workspace data in each visitor's browser.
 
 ## Configuration
 

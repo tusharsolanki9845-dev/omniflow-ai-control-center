@@ -1,0 +1,28 @@
+{
+  "cpuPct": 14,
+  "memory": {
+    "usedMb": 512,
+    "totalMb": 4096,
+    "freeMb": 3584,
+    "percent": 13
+  },
+  "process": {
+    "rssMb": 118,
+    "heapUsedMb": 72,
+    "heapTotalMb": 148
+  },
+  "system": {
+    "cores": 4,
+    "platform": "linux",
+    "uptimeSeconds": 3600,
+    "loadAvg": [0.18, 0.22, 0.19]
+  },
+  "agent": {
+    "status": "connected",
+    "tunnel": "WireGuard-Loopback",
+    "port": 8006,
+    "latencyMs": 4,
+    "allowedDirsCount": 3
+  },
+  "timestamp": "2026-11-10T14:00:00.000Z"
+}

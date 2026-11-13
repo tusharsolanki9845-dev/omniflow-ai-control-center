@@ -1,0 +1,6 @@
+{
+  "name": "OmniFlow AI Control Center",
+  "description": "Personal AI control center & unified gateway connecting models, cloud tool connectors, local device agents, approval queues, and audit logs.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

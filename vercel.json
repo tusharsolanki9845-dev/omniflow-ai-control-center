@@ -1,0 +1,70 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/download/apk",
+      "destination": "/omniflow-v1.2-release.apk"
+    },
+    {
+      "source": "/api/apk/info",
+      "destination": "/api/static-apk-info.json"
+    },
+    {
+      "source": "/api/vercel/status",
+      "destination": "/api/static-vercel-status.json"
+    },
+    {
+      "source": "/api/github/status",
+      "destination": "/api/static-github-status.json"
+    },
+    {
+      "source": "/api/system/metrics",
+      "destination": "/api/static-system-metrics.json"
+    },
+    {
+      "source": "/((?!assets/|icon|sw\\.js|manifest\\.json|apple-touch-icon|favicon|omniflow|api/).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/omniflow-v1.2-release.apk",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/vnd.android.package-archive"
+        },
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"OmniFlow-v1.2-release.apk\""
+        }
+      ]
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        }
+      ]
+    },
+    {
+      "source": "/manifest.json",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/manifest+json"
+        }
+      ]
+    }
+  ]
+}

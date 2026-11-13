@@ -1,0 +1,7 @@
+/api/download/apk    /omniflow-v1.2-release.apk     200
+/api/apk/info        /api/static-apk-info.json      200
+/api/vercel/status   /api/static-vercel-status.json 200
+/api/netlify/status  /api/static-vercel-status.json 200
+/api/github/status   /api/static-github-status.json 200
+/api/system/metrics  /api/static-system-metrics.json 200
+/*                   /index.html                    200

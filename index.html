@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <title>OmniFlow — Personal AI Control Center</title>
+    <meta name="description" content="Personal AI control center & developer gateway for Tushar Solanki connecting models, tools, GitHub repos, and live Vercel portfolio." />
+    <meta name="keywords" content="OmniFlow, AI Gateway, Tushar Solanki, AI Control Center, MCP, LLM Router, GitHub Sync, Vercel Portfolio" />
+    <meta name="author" content="Tushar Solanki" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- OpenGraph Social Cards -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="OmniFlow" />
+    <meta property="og:title" content="OmniFlow — Personal AI Control Center" />
+    <meta property="og:description" content="Personal AI control center & developer gateway connecting models, cloud tool connectors, local device agents, approval queues, and audit logs." />
+    <meta property="og:image" content="/icon-512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="OmniFlow AI Control Center Logo" />
+
+    <!-- Twitter / X Cards -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="OmniFlow — Personal AI Control Center" />
+    <meta name="twitter:description" content="Personal AI control center & developer gateway connecting models, cloud tool connectors, local device agents, approval queues, and audit logs." />
+    <meta name="twitter:image" content="/icon-512.png" />
+
+    <!-- PWA & Mobile Web App Meta -->
+    <meta name="theme-color" content="#4f46e5" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="OmniFlow" />
+
+    <!-- Favicons & Icons -->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="alternate icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Preconnect Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+
+    <!-- Schema.org Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "name": "OmniFlow AI Control Center",
+          "url": "https://tushar-portfolio-live.vercel.app",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "All",
+          "description": "Unified AI control center & gateway connecting models, cloud tool connectors, local device agents, approval queues, and audit logs.",
+          "author": {
+            "@type": "Person",
+            "name": "Tushar Solanki",
+            "url": "https://tushar-portfolio-live.vercel.app",
+            "sameAs": [
+              "https://github.com/tusharsolanki9845-dev"
+            ]
+          },
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          }
+        },
+        {
+          "@type": "Person",
+          "name": "Tushar Solanki",
+          "email": "tusharsolanki9845@gmail.com",
+          "jobTitle": "AI & Full-Stack Software Engineer",
+          "url": "https://tushar-portfolio-live.vercel.app",
+          "sameAs": [
+            "https://github.com/tusharsolanki9845-dev"
+          ],
+          "knowsAbout": [
+            "Artificial Intelligence",
+            "Machine Learning",
+            "JavaScript",
+            "TypeScript",
+            "Node.js",
+            "React",
+            "Supabase",
+            "Vercel"
+          ]
+        }
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Register service worker for offline resilience and fast loads
+      if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {
+            // Silently ignore if in restricted iframe sandbox
+          });
+        });
+      }
+    </script>
+  </body>
+</html>

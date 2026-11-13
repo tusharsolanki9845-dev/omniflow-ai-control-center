@@ -42,11 +42,13 @@ docker run --rm -p 3000:3000 -e GEMINI_API_KEY=your-key omniflow
 
 The service health endpoint is `GET /api/health`.
 
-## Hosting notes
+## Deploy a free preview on Render
 
-OmniFlow includes an Express backend and needs a host that can run a persistent Node.js process or container. Static-only hosting can serve the interface, but will not provide the API endpoints.
+The included `render.yaml` configures a Docker web service with `/api/health` as its health check. In Render, create a new Blueprint from this GitHub repository and choose the Free plan. Set `GEMINI_API_KEY` as a secret in the Render dashboard; do not commit it to the repository.
 
-Confirm with Nestify that your specific plan supports Node.js applications or Docker containers before deploying. Do not use unofficial Git remotes or webhook endpoints.
+Render's Free web services spin down after 15 minutes without traffic, can take about a minute to wake, have ephemeral storage, and may be restarted or suspended when included usage limits are reached. Render states that Free instances are not intended for production applications. Use this option for a no-cost demo, not a production service with uptime or data-persistence requirements.
+
+OmniFlow stores workspace data in the visitor's browser. The Express backend is required for chat, transcription, and system health endpoints; static-only hosting will not provide those APIs.
 
 ## Configuration
 

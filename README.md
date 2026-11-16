@@ -42,6 +42,12 @@ docker run --rm -p 3000:3000 -e GEMINI_API_KEY=your-key omniflow
 
 The service health endpoint is `GET /api/health`.
 
+## Deploy on Netlify
+
+Import this GitHub repository into a Netlify site. `netlify.toml` builds the Vite frontend to `dist` and deploys the Express API as a Netlify Function at `/api/*`. Add `GEMINI_API_KEY` in the site's environment variables with the Functions scope enabled; do not commit it. Add `VITE_FIREBASE_*` build variables if Google Drive sign-in is needed.
+
+Netlify Functions have a 6 MB request/response payload limit, so audio transcription requests may be rejected before reaching the app if they exceed that platform limit.
+
 ## Deploy on Vercel
 
 Import this GitHub repository into a Vercel project. The Vite build publishes the frontend from `dist`, while `api/[...path].ts` exposes the Express API as a Vercel Function. Add `GEMINI_API_KEY` as an environment variable in the Vercel project settings; do not commit it.

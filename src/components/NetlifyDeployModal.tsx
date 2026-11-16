@@ -52,7 +52,7 @@ docker run -p 3000:3000 -e GEMINI_API_KEY=... omniflow`}
         <div className="space-y-2 text-xs">
           <p className="font-semibold text-slate-800 dark:text-slate-200">Provider notes</p>
           <p className="text-slate-600 dark:text-slate-300">
-            Netlify's static hosting setup in this project does not run the Express API. Before using Nestify, confirm directly with the provider that your plan supports Node.js applications or Docker containers.
+            This project deploys its Express API through a Netlify Function at /api/*. Add GEMINI_API_KEY to the Netlify site's environment variables with Functions access enabled. Netlify Functions impose a 6 MB request/response limit.
           </p>
           <div className="flex flex-wrap gap-4 pt-1">
             <a

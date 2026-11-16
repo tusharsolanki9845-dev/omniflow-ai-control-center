@@ -7,6 +7,7 @@ import express, { type ErrorRequestHandler } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
+import { createFirebaseAuthMiddleware } from './src/services/firebaseApiAuth';
 
 dotenv.config();
 
@@ -41,6 +42,14 @@ app.use(
     message: { error: 'Request limit reached. Try again later.' },
   })
 );
+
+const requireFirebaseAuth = createFirebaseAuthMiddleware(() => process.env.FIREBASE_PROJECT_ID);
+app.use('/api', (req, res, next) => {
+  if (req.path === '/health' || (process.env.NODE_ENV !== 'production' && process.env.NETLIFY !== 'true')) {
+    return next();
+  }
+  return requireFirebaseAuth(req, res, next);
+});
 
 const aiRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,

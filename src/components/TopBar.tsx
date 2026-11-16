@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, AlertTriangle, Search, Menu, Smartphone, Github, Bell, Cloud } from 'lucide-react';
+import { Sparkles, AlertTriangle, Search, Menu, Smartphone, Github, Bell, Cloud, LogOut } from 'lucide-react';
 import { PWAInstallButton } from './PWAInstallButton';
 import { ThemeSelectorButton } from './ThemeSelectorButton';
 import { ThemeMode, ThemeScheduleConfig } from '../types';
@@ -24,6 +24,8 @@ interface TopBarProps {
   onOpenNetlifyDeploy?: () => void;
   onOpenGoogleDrive?: () => void;
   onOpenNotifications?: () => void;
+  signedInUser: string;
+  onSignOut: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -46,6 +48,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenNetlifyDeploy,
   onOpenGoogleDrive,
   onOpenNotifications,
+  signedInUser,
+  onSignOut,
 }) => {
   return (
     <header className="h-14 border-b border-slate-200/80 dark:border-slate-800/80 glass-surface sticky top-0 z-40 px-3 sm:px-6 flex items-center justify-between gap-3 sm:gap-8 transition-colors select-none shadow-[0_1px_3px_rgba(0,0,0,0.02)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.4)]">
@@ -277,6 +281,15 @@ export const TopBar: React.FC<TopBarProps> = ({
           className="px-3.5 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 dark:bg-gradient-to-r dark:from-indigo-600 dark:to-violet-600 dark:hover:from-indigo-500 dark:hover:to-violet-500 rounded-lg transition-all whitespace-nowrap shadow-xs shadow-indigo-500/20 active:scale-[0.98]"
         >
           Gateway Config
+        </button>
+        <button
+          type="button"
+          onClick={onSignOut}
+          aria-label={`Sign out ${signedInUser}`}
+          title={`Sign out ${signedInUser}`}
+          className="p-1.5 text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        >
+          <LogOut className="h-4 w-4" />
         </button>
       </div>
     </header>

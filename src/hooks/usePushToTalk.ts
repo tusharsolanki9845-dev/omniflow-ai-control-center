@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { authenticatedFetch } from '../services/firebaseAuthService';
 
 interface UsePushToTalkOptions {
   onTranscriptComplete?: (transcript: string) => void;
@@ -196,7 +197,7 @@ export function usePushToTalk({ onTranscriptComplete, autoSend = false }: UsePus
           const base64Audio = await blobToBase64(audioBlob);
 
           // Send to speech-to-text service
-          const response = await fetch('/api/transcribe', {
+          const response = await authenticatedFetch('/api/transcribe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

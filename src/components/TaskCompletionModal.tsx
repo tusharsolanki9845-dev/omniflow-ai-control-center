@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AIProject } from '../types';
+import { authenticatedFetch } from '../services/firebaseAuthService';
 
 interface TaskCompletionModalProps {
   isOpen: boolean;
@@ -64,7 +65,7 @@ export const TaskCompletionModal: React.FC<TaskCompletionModalProps> = ({
     const startedAt = performance.now();
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await authenticatedFetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -31,6 +31,7 @@ import {
   DriveStorageQuota,
 } from '../services/googleDriveService';
 import { AuditLog, Connection, ModelConfig } from '../types';
+import { authenticatedFetch } from '../services/firebaseAuthService';
 
 interface GoogleDriveUploadModalProps {
   isOpen: boolean;
@@ -179,7 +180,7 @@ export const GoogleDriveUploadModal: React.FC<GoogleDriveUploadModalProps> = ({
 
       if (type === 'FULL_PROJECT') {
         // Fetch bundle from server
-        const res = await fetch('/api/project/bundle');
+        const res = await authenticatedFetch('/api/project/bundle');
         if (!res.ok) {
           throw new Error('Failed to retrieve project files from server.');
         }
@@ -243,7 +244,7 @@ export const GoogleDriveUploadModal: React.FC<GoogleDriveUploadModalProps> = ({
       } else if (type === 'ALL_IN_ONE') {
         let bundleFiles = [];
         try {
-          const res = await fetch('/api/project/bundle');
+          const res = await authenticatedFetch('/api/project/bundle');
           if (res.ok) {
             const data = await res.json();
             bundleFiles = data.files || [];

@@ -34,6 +34,7 @@ import {
   INITIAL_NOTIFICATIONS,
 } from '../mock/initialData';
 import { notificationSound } from '../utils/notificationSound';
+import { authenticatedFetch } from './firebaseAuthService';
 
 const STORAGE_KEY = 'omniflow_state_v1.1';
 const DEFAULT_CONNECTIONS: Connection[] = INITIAL_CONNECTIONS.map((connection) => ({
@@ -64,7 +65,7 @@ export interface OmniFlowState {
   notificationSoundEnabled: boolean;
 }
 
-function getInitialState(): OmniFlowState {
+function getInitialState(storageKey: string): OmniFlowState {
   if (typeof window === 'undefined') {
     return {
       models: INITIAL_MODELS,
@@ -87,7 +88,7 @@ function getInitialState(): OmniFlowState {
   }
 
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey);
     if (raw) {
       const parsed = JSON.parse(raw);
       const existingAuditIds = new Set((parsed.auditLogs || []).map((l: any) => l.id));
@@ -168,17 +169,18 @@ function getInitialState(): OmniFlowState {
   };
 }
 
-export function useOmniFlowStore() {
-  const [state, setState] = useState<OmniFlowState>(getInitialState);
+export function useOmniFlowStore(userId: string) {
+  const storageKey = `${STORAGE_KEY}_${userId}`;
+  const [state, setState] = useState<OmniFlowState>(() => getInitialState(storageKey));
 
   // Sync to local storage
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(storageKey, JSON.stringify(state));
     } catch (e) {
       console.error('Failed to save to localStorage:', e);
     }
-  }, [state]);
+  }, [state, storageKey]);
 
   // Actions & Approvals
   const approveAction = (actionId: string) => {
@@ -393,7 +395,7 @@ export function useOmniFlowStore() {
     }));
 
     const startedAt = performance.now();
-    const response = await fetch('/api/chat', {
+    const response = await authenticatedFetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: content, systemPrompt }),
@@ -622,7 +624,7 @@ export function useOmniFlowStore() {
   };
 
   const resetToDefaults = () => {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(storageKey);
     setState({
       models: INITIAL_MODELS,
       connections: DEFAULT_CONNECTIONS,

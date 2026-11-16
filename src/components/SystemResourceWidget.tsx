@@ -13,6 +13,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { LocalDeviceAgentConfig } from '../types';
+import { authenticatedFetch } from '../services/firebaseAuthService';
 
 interface SystemResourceWidgetProps {
   localAgent: LocalDeviceAgentConfig;
@@ -83,7 +84,7 @@ export const SystemResourceWidget: React.FC<SystemResourceWidgetProps> = ({ loca
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const res = await fetch('/api/system/metrics');
+        const res = await authenticatedFetch('/api/system/metrics');
         const isJson = res.headers.get('content-type')?.includes('application/json');
         if (res.ok && isJson) {
           const data: LiveMetrics = await res.json();

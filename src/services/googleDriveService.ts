@@ -125,10 +125,13 @@ export const signInWithGoogleDrive = async (): Promise<{ user: User; accessToken
  * Signs out and clears the in-memory access token
  */
 export const signOutGoogleDrive = async (): Promise<void> => {
-  if (isFirebaseConfigured()) {
-    await signOut(getFirebaseAuth());
+  try {
+    if (isFirebaseConfigured()) {
+      await signOut(getFirebaseAuth());
+    }
+  } finally {
+    cachedAccessToken = null;
   }
-  cachedAccessToken = null;
 };
 
 /**

@@ -4,7 +4,16 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import type { User } from 'firebase/auth';
 import { useOmniFlowStore } from './services/store';
+import {
+  getFirebaseAuthErrorMessage,
+  isFirebaseAuthConfigured,
+  signOutAppUser,
+  subscribeToAppAuth,
+} from './services/firebaseAuthService';
+import { signOutGoogleDrive } from './services/googleDriveService';
+import { SignInScreen } from './components/SignInScreen';
 import { TopBar } from './components/TopBar';
 import { NavigationSidebar } from './components/NavigationSidebar';
 import { ChatWorkbench } from './components/ChatWorkbench';
@@ -32,6 +41,55 @@ import { GoogleDriveUploadModal } from './components/GoogleDriveUploadModal';
 import { FolderGit2, Terminal, Cpu, ShieldCheck, Menu } from 'lucide-react';
 
 export default function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const isConfigured = isFirebaseAuthConfigured();
+
+  useEffect(() => {
+    if (!isConfigured) {
+      setAuthLoading(false);
+      return;
+    }
+
+    return subscribeToAppAuth(
+      (currentUser) => {
+        setUser(currentUser);
+        setAuthError(null);
+        setAuthLoading(false);
+      },
+      (error) => {
+        setAuthError(getFirebaseAuthErrorMessage(error));
+        setAuthLoading(false);
+      }
+    );
+  }, [isConfigured]);
+
+  const handleSignOut = async () => {
+    try {
+      await signOutGoogleDrive();
+    } catch (error) {
+      console.error('Google Drive sign-out failed:', error instanceof Error ? error.name : 'UnknownError');
+    }
+    await signOutAppUser();
+  };
+
+  if (authLoading) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-slate-950 text-sm text-slate-300" role="status">
+        Checking sign-in...
+      </main>
+    );
+  }
+
+  if (!isConfigured || !user) {
+    return <SignInScreen isConfigured={isConfigured} authError={authError} />;
+  }
+
+  return <AuthenticatedApp key={user.uid} user={user} onSignOut={handleSignOut} />;
+}
+
+function AuthenticatedApp({ user, onSignOut }: { user: User; onSignOut: () => void }) {
   const {
     state,
     approveAction,
@@ -62,7 +120,7 @@ export default function App() {
     simulateTaskCompleted,
     simulateTaskFailed,
     simulateUrgentApproval,
-  } = useOmniFlowStore();
+  } = useOmniFlowStore(user.uid);
 
   const [activeTab, setActiveTab] = useState<string>('projects');
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -206,6 +264,8 @@ export default function App() {
 
       {/* Top Bar Contract (3 zones) */}
       <TopBar
+        signedInUser={user.email || user.displayName || 'account'}
+        onSignOut={onSignOut}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         pendingApprovalsCount={pendingApprovalsCount}

@@ -35,17 +35,18 @@ export const VercelDeployModal: React.FC<VercelDeployModalProps> = ({ isOpen, on
         </div>
 
         <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-          OmniFlow requires its Express server for chat, transcription, and system metrics. No Vercel serverless adapter is configured here, so a static Vite deployment will not provide those endpoints.
+          This project exposes its Express API through a Vercel Function. Users must sign in with Firebase GitHub or Google authentication before using the dashboard or API.
         </p>
 
         <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs dark:border-slate-800 dark:bg-slate-800/40">
           <p className="font-semibold text-slate-800 dark:text-slate-200">Recommended deployment</p>
           <p className="text-slate-600 dark:text-slate-300">
-            Use a Node.js host or container service, build the included Docker image, and set <code className="font-mono">GEMINI_API_KEY</code> as a secret in that provider's settings.
+            Set VITE_FIREBASE_* build variables and FIREBASE_PROJECT_ID plus GEMINI_API_KEY for functions. See the deployment guide for provider setup.
           </p>
           <pre className="overflow-x-auto rounded-lg bg-slate-950 p-3 font-mono text-slate-200">
-{`docker build -t omniflow .
-docker run -p 3000:3000 -e GEMINI_API_KEY=... omniflow`}
+{`VITE_FIREBASE_*=... (build)
+FIREBASE_PROJECT_ID=...
+GEMINI_API_KEY=...`}
           </pre>
         </div>
 

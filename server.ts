@@ -18,6 +18,7 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const MAX_AUDIO_BYTES = 15 * 1024 * 1024;
 const MAX_PROMPT_LENGTH = 12_000;
 const MAX_SYSTEM_PROMPT_LENGTH = 2_000;
+const MAX_HISTORY_MESSAGES = 40;
 const REPOSITORY_URL =
   process.env.PUBLIC_REPOSITORY_URL ||
   'https://github.com/tusharsolanki9845-dev/omniflow-ai-control-center';
@@ -71,25 +72,72 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.post('/api/chat', aiRateLimit, async (req, res) => {
-  const { prompt, systemPrompt } = req.body ?? {};
+  const { prompt, systemPrompt, messages: historyMessages, model } = req.body ?? {};
 
-  if (typeof prompt !== 'string' || !prompt.trim()) {
+  // Support both legacy single-prompt and multi-turn history formats
+  const hasHistory = Array.isArray(historyMessages) && historyMessages.length > 0;
+
+  if (!hasHistory && (typeof prompt !== 'string' || !prompt.trim())) {
     return res.status(400).json({ error: 'Prompt is required.' });
   }
-  if (prompt.length > MAX_PROMPT_LENGTH) {
+
+  if (typeof prompt === 'string' && prompt.length > MAX_PROMPT_LENGTH) {
     return res.status(413).json({ error: `Prompt must not exceed ${MAX_PROMPT_LENGTH} characters.` });
   }
+
   if (systemPrompt !== undefined && (typeof systemPrompt !== 'string' || systemPrompt.length > MAX_SYSTEM_PROMPT_LENGTH)) {
     return res.status(400).json({ error: `System prompt must be a string of at most ${MAX_SYSTEM_PROMPT_LENGTH} characters.` });
   }
-  if (!aiClient) {
-    return res.status(503).json({ error: 'AI chat is unavailable because GEMINI_API_KEY is not configured.' });
+
+  if (hasHistory) {
+    if (historyMessages.length > MAX_HISTORY_MESSAGES) {
+      return res.status(413).json({ error: `Conversation history must not exceed ${MAX_HISTORY_MESSAGES} messages.` });
+    }
+    for (const msg of historyMessages) {
+      if (!msg || typeof msg !== 'object' || (msg.role !== 'user' && msg.role !== 'assistant' && msg.role !== 'model')) {
+        return res.status(400).json({ error: 'Each history message must have a role of "user" or "assistant".' });
+      }
+      if (typeof msg.content !== 'string') {
+        return res.status(400).json({ error: 'Each history message must include a string content field.' });
+      }
+    }
   }
 
+  if (!aiClient) {
+    return res.status(503).json({
+      error: 'AI chat is unavailable because GEMINI_API_KEY is not configured.',
+      code: 'MISSING_API_KEY',
+    });
+  }
+
+  const selectedModel =
+    typeof model === 'string' && model.trim() ? model.trim() : GEMINI_MODEL;
+
   try {
+    // Build contents for Gemini
+    let contents: any;
+
+    if (hasHistory) {
+      // Convert history to Gemini format. Gemini uses "user" and "model" roles.
+      contents = historyMessages.map((msg: { role: string; content: string }) => ({
+        role: msg.role === 'assistant' || msg.role === 'model' ? 'model' : 'user',
+        parts: [{ text: msg.content }],
+      }));
+
+      // Append the latest user prompt if it was also provided separately
+      if (typeof prompt === 'string' && prompt.trim()) {
+        contents.push({
+          role: 'user',
+          parts: [{ text: prompt.trim() }],
+        });
+      }
+    } else {
+      contents = prompt;
+    }
+
     const response = await aiClient.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: prompt,
+      model: selectedModel,
+      contents,
       config: {
         systemInstruction: systemPrompt || 'You are OmniFlow Control Assistant.',
       },
@@ -98,7 +146,7 @@ app.post('/api/chat', aiRateLimit, async (req, res) => {
     const usage = response.usageMetadata;
     return res.json({
       text: response.text ?? '',
-      model: GEMINI_MODEL,
+      model: selectedModel,
       usage: {
         promptTokens: usage?.promptTokenCount ?? 0,
         completionTokens: usage?.candidatesTokenCount ?? 0,
@@ -106,7 +154,26 @@ app.post('/api/chat', aiRateLimit, async (req, res) => {
     });
   } catch (error) {
     console.error('Chat generation failed:', error instanceof Error ? error.name : 'UnknownError');
-    return res.status(502).json({ error: 'The AI provider could not complete this request.' });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+
+    // Provide more actionable error messages
+    if (message.includes('API_KEY') || message.includes('api key') || message.includes('401')) {
+      return res.status(503).json({
+        error: 'Invalid or missing Gemini API key. Check GEMINI_API_KEY in your environment.',
+        code: 'INVALID_API_KEY',
+      });
+    }
+    if (message.includes('quota') || message.includes('429') || message.includes('rate')) {
+      return res.status(429).json({
+        error: 'Gemini rate limit or quota exceeded. Please try again in a moment.',
+        code: 'RATE_LIMIT',
+      });
+    }
+
+    return res.status(502).json({
+      error: 'The AI provider could not complete this request.',
+      code: 'PROVIDER_ERROR',
+    });
   }
 });
 

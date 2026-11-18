@@ -375,7 +375,7 @@ export function useOmniFlowStore(userId: string) {
     throw new Error('Live tool execution is not configured in this build.');
   };
 
-  // Chat sending
+  // Chat sending — multi-turn aware
   const sendChatMessage = async (
     content: string,
     modelId: string,
@@ -389,28 +389,62 @@ export function useOmniFlowStore(userId: string) {
       createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
     };
 
+    // Optimistically add the user message
     setState((prev) => ({
       ...prev,
       messages: [...prev.messages, userMsg],
     }));
 
+    // Build conversation history (last 30 messages to stay within limits)
+    const history = [...state.messages, userMsg]
+      .filter((m) => m.role === 'user' || m.role === 'assistant')
+      .slice(-30)
+      .map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
     const startedAt = performance.now();
     const response = await authenticatedFetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: content, systemPrompt }),
+      body: JSON.stringify({
+        messages: history,
+        systemPrompt,
+        model: modelId,
+      }),
     });
-    let result: { error?: string; text?: string; usage?: { promptTokens?: number; completionTokens?: number }; model?: string };
+
+    let result: {
+      error?: string;
+      code?: string;
+      text?: string;
+      usage?: { promptTokens?: number; completionTokens?: number };
+      model?: string;
+    };
+
     try {
       result = await response.json();
     } catch {
-      throw new Error('The chat service returned an invalid response.');
+      throw new Error('The chat service returned an invalid response. Check that the server is running.');
     }
+
     if (!response.ok) {
-      throw new Error(result.error || 'The chat request failed.');
+      // Map known error codes to clearer user-facing messages
+      if (result.code === 'MISSING_API_KEY' || result.code === 'INVALID_API_KEY') {
+        throw new Error(result.error || 'Gemini API key is missing or invalid. Add GEMINI_API_KEY to your environment.');
+      }
+      if (result.code === 'RATE_LIMIT' || response.status === 429) {
+        throw new Error(result.error || 'Rate limit reached. Please wait a moment and try again.');
+      }
+      if (response.status === 503) {
+        throw new Error(result.error || 'AI service is temporarily unavailable. Check your Gemini API key configuration.');
+      }
+      throw new Error(result.error || `Chat request failed (${response.status}).`);
     }
+
     if (typeof result.text !== 'string' || !result.text.trim()) {
-      throw new Error('The AI provider returned an empty response.');
+      throw new Error('The AI provider returned an empty response. Try rephrasing your message.');
     }
 
     const botMsg: ChatMessage = {
@@ -579,52 +613,24 @@ export function useOmniFlowStore(userId: string) {
       message: customError || 'Sandbox policy violation: Write attempt blocked for /var/log/audit.log',
       type: 'TASK_FAILED',
       priority: 'high',
-      actionLabel: 'Inspect in Audit',
+      actionLabel: 'View Details',
       actionTab: 'audit',
-      errorDetails: 'ERR_PERMISSION_DENIED: Target destination outside allowlisted sandbox directories',
+      errorDetails: customError,
     });
   };
 
-  const simulateUrgentApproval = (customTitle?: string, customAction?: string) => {
-    const actId = `act-${Date.now().toString(36)}`;
-    const newAction: Action = {
-      id: actId,
-      userId: 'user-tushar',
-      promptIntent: customAction || 'Execute live schema patch on production Supabase instance',
-      toolId: 'tool-postgres-query',
-      toolName: 'postgres.execute_dml',
-      provider: 'postgres_mcp',
-      arguments: { schema: 'public', table: 'auth_tokens', operation: 'ROTATE_KEYS' },
-      status: 'pending_approval',
-      approvalRequired: true,
-      riskLevel: 'critical',
-      targetResource: 'PostgreSQL / auth_tokens',
-      diffPreview: {
-        before: { rotationScheduled: false },
-        after: { rotationScheduled: true, gracePeriodHours: 24 },
-        summary: 'Emergency API token rotation triggered by automated anomaly detection',
-      },
-      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
-    };
-
-    setState((prev) => ({
-      ...prev,
-      actions: [newAction, ...prev.actions],
-    }));
-
+  const simulateUrgentApproval = () => {
     addNotification({
-      title: customTitle || 'Urgent Manual Approval Required',
-      message: customAction || 'Critical database operation queued: Automated key rotation awaiting manual signature.',
+      title: 'Approval Required',
+      message: 'High-risk action waiting for operator review in the Approval Queue.',
       type: 'APPROVAL_REQUIRED',
       priority: 'urgent',
-      actionLabel: 'Review in Approvals',
+      actionLabel: 'Review Now',
       actionTab: 'approvals',
-      relatedEntityId: actId,
     });
   };
 
   const resetToDefaults = () => {
-    localStorage.removeItem(storageKey);
     setState({
       models: INITIAL_MODELS,
       connections: DEFAULT_CONNECTIONS,

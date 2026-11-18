@@ -13,6 +13,7 @@ import {
   RotateCcw,
   SlidersHorizontal,
   Bot,
+  Download,
 } from 'lucide-react';
 import { ModelConfig, ChatMessage, Connection } from '../types';
 import { PushToTalkButton } from './PushToTalkButton';
@@ -114,6 +115,23 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
     setTimeout(() => setCopiedId(null), 1800);
   };
 
+  const exportConversation = () => {
+    if (!messages.length) return;
+    const lines = messages.map((m) => {
+      const role = m.role === 'user' ? 'User' : m.role === 'assistant' ? 'Assistant' : m.role;
+      const ts = m.createdAt || '';
+      return `### ${role}${ts ? ` (${ts})` : ''}\n\n${m.content}\n`;
+    });
+    const md = `# OmniFlow Conversation\n\nExported: ${new Date().toISOString()}\nModel: ${selectedModelId}\nMessages: ${messages.length}\n\n---\n\n${lines.join('\n---\n\n')}`;
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `omniflow-chat-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const toggleReasoning = (id: string) => {
     setExpandedReasoningIds((prev) => ({ ...prev, [id]: !prev[id] }));
   };
@@ -197,6 +215,14 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
             <span className="hidden sm:inline">System Instruction</span>
           </button>
           <button
+            onClick={exportConversation}
+            title="Export conversation as Markdown"
+            disabled={!messages.length}
+            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Download className="w-3.5 h-3.5" />
+          </button>
+          <button
             onClick={onClearMessages}
             title="Clear conversation"
             className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -257,7 +283,6 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* Gemini 2.5 Flash */}
                   <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0e1424]/80 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 space-y-3 flex flex-col justify-between shadow-xs">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
@@ -281,7 +306,6 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
                     </div>
                   </div>
 
-                  {/* Claude 3.7 Sonnet */}
                   <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0e1424]/80 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 space-y-3 flex flex-col justify-between shadow-xs">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
@@ -305,7 +329,6 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
                     </div>
                   </div>
 
-                  {/* DeepSeek R1 */}
                   <div className="p-4 rounded-xl bg-white/80 dark:bg-[#0e1424]/80 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 space-y-3 flex flex-col justify-between shadow-xs">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
@@ -351,32 +374,25 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
             )}
           </div>
         ) : messages.length === 0 ? (
-          <div className="max-w-xl mx-auto py-12 sm:py-16 text-center space-y-4">
-            <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-indigo-500/20 to-violet-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm">
-              <Bot className="w-6 h-6" />
+          <div className="flex flex-col items-center justify-center h-full text-center space-y-6 py-12">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+              <Bot className="w-8 h-8 text-white" />
             </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                Unified AI Model Gateway
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
-                Route requests to Gemini 2.5 Flash, Claude 3.7, or local models. All tool interactions are validated by security connectors.
+            <div className="space-y-2 max-w-md">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">OmniFlow Control Assistant</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Ask anything about your projects, connectors, or workflows. Conversation history is now remembered across turns.
               </p>
             </div>
-
-            <div className="pt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-left">
-              {promptShortcuts.map((item, idx) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-lg">
+              {promptShortcuts.map((s) => (
                 <button
-                  key={idx}
-                  onClick={() => setInputPrompt(item.prompt)}
-                  className="p-3 text-xs bg-white/70 dark:bg-[#0c121e]/70 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 rounded-xl hover:border-indigo-400 dark:hover:border-indigo-600 transition-all text-slate-700 dark:text-slate-300 group hover:shadow-sm"
+                  key={s.label}
+                  onClick={() => setInputPrompt(s.prompt)}
+                  className="text-left px-3.5 py-2.5 rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white/60 dark:bg-slate-900/40 hover:bg-white dark:hover:bg-slate-800/80 text-xs transition-colors"
                 >
-                  <div className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
-                    {item.label}
-                  </div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
-                    {item.prompt}
-                  </div>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 block">{s.label}</span>
+                  <span className="text-slate-500 dark:text-slate-400 line-clamp-1">{s.prompt}</span>
                 </button>
               ))}
             </div>
@@ -387,124 +403,41 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
             return (
               <div
                 key={msg.id}
-                className={`flex gap-3 sm:gap-4 max-w-4xl mx-auto ${isUser ? 'justify-end' : 'justify-start'}`}
+                className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
               >
                 {!isUser && (
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white shrink-0 flex items-center justify-center font-bold text-xs shadow-sm shadow-indigo-500/20">
-                    <Sparkles className="w-4 h-4" />
+                  <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 flex items-center justify-center shrink-0 mt-0.5">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
                   </div>
                 )}
-
                 <div
-                  className={`space-y-3 max-w-[88%] sm:max-w-[80%] ${
+                  className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                     isUser
-                      ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-2xl rounded-tr-xs px-4 py-3 shadow-md shadow-indigo-500/10'
-                      : 'bg-white/85 dark:bg-[#0d1424]/85 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800/80 rounded-2xl rounded-tl-xs p-4 sm:p-5 shadow-xs text-slate-800 dark:text-slate-200'
+                      ? 'bg-indigo-600 text-white rounded-br-md'
+                      : 'bg-white/80 dark:bg-[#0e1424]/80 backdrop-blur-md border border-slate-200/80 dark:border-slate-800/80 text-slate-800 dark:text-slate-200 rounded-bl-md shadow-xs'
                   }`}
                 >
-                  {/* Assistant Header */}
-                  {!isUser && (
-                    <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 pb-2 border-b border-slate-100 dark:border-slate-800/80">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-slate-800 dark:text-slate-200">
-                          {models.find((m) => m.id === msg.modelId)?.name || 'Gateway LLM'}
-                        </span>
-                        <span className="text-[11px] font-mono tabular-nums">{msg.createdAt}</span>
-                      </div>
-                      <button
-                        onClick={() => copyToClipboard(msg.content, msg.id)}
-                        className="hover:text-slate-600 dark:hover:text-slate-300 transition-colors p-1"
-                        title="Copy text"
-                      >
-                        {copiedId === msg.id ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-500" />
-                        ) : (
-                          <Copy className="w-3.5 h-3.5" />
-                        )}
-                      </button>
-                    </div>
-                  )}
+                  <div className="whitespace-pre-wrap">{msg.content}</div>
 
-                  {/* Deep Reasoning Box */}
-                  {!isUser && msg.reasoning && (
-                    <div className="rounded-xl bg-slate-50/80 dark:bg-[#070c16]/70 border border-slate-200/80 dark:border-slate-800/80 overflow-hidden text-xs">
-                      <button
-                        onClick={() => toggleReasoning(msg.id)}
-                        className="w-full px-3 py-2 flex items-center justify-between text-slate-700 dark:text-slate-300 font-medium hover:bg-slate-100/60 dark:hover:bg-slate-800/50 transition-colors"
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <Brain className="w-3.5 h-3.5 text-indigo-500" />
-                          Model Reasoning & Guardrail Trace
-                        </span>
-                        <ChevronDown
-                          className={`w-3.5 h-3.5 transition-transform ${
-                            expandedReasoningIds[msg.id] ? 'rotate-180' : ''
-                          }`}
-                        />
-                      </button>
-                      {expandedReasoningIds[msg.id] && (
-                        <div className="p-3 border-t border-slate-200/80 dark:border-slate-800/80 font-mono text-[11px] text-slate-600 dark:text-slate-400 whitespace-pre-wrap leading-relaxed bg-white/40 dark:bg-slate-950/40">
-                          {msg.reasoning}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Main text content */}
-                  <div className="text-xs sm:text-[13px] leading-relaxed whitespace-pre-wrap">
-                    {msg.content}
-                  </div>
-
-                  {/* Tool Call Invocation Cards */}
-                  {!isUser && msg.toolCalls && msg.toolCalls.length > 0 && (
-                    <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                      <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <Wrench className="w-3.5 h-3.5" />
-                        Standardized Tool Calls ({msg.toolCalls.length})
-                      </div>
-                      {msg.toolCalls.map((tc) => (
-                        <div
-                          key={tc.id}
-                          className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 text-xs font-mono space-y-1.5"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold text-indigo-600 dark:text-indigo-400">
-                              {tc.toolName}
-                            </span>
-                            {tc.status === 'success' && (
-                              <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-sans font-medium">
-                                <CheckCircle2 className="w-3 h-3" /> Executed (Safe)
-                              </span>
-                            )}
-                            {tc.status === 'requires_approval' && (
-                              <button
-                                onClick={onOpenApprovals}
-                                className="inline-flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400 font-sans font-semibold hover:underline"
-                              >
-                                <AlertTriangle className="w-3 h-3" /> Queued for Approval &rarr;
-                              </button>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-950 p-2 rounded-lg border border-slate-200/70 dark:border-slate-800 overflow-x-auto">
-                            args: {JSON.stringify(tc.args)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Token & Latency Meter */}
                   {!isUser && msg.tokenStats && (
-                    <div className="pt-2 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500 font-mono tabular-nums border-t border-slate-100 dark:border-slate-800">
+                    <div className="pt-2 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500 font-mono tabular-nums border-t border-slate-100 dark:border-slate-800 mt-2">
                       <span>
                         {msg.tokenStats.promptTokens + msg.tokenStats.completionTokens} tokens (in:{' '}
                         {msg.tokenStats.promptTokens}, out: {msg.tokenStats.completionTokens})
                       </span>
-                      <span>
-                        {msg.tokenStats.latencyMs}ms
-                        {msg.tokenStats.totalCost !== undefined &&
-                          ` · $${msg.tokenStats.totalCost.toFixed(5)}`}
-                      </span>
+                      <span>{msg.tokenStats.latencyMs}ms</span>
+                    </div>
+                  )}
+
+                  {!isUser && (
+                    <div className="pt-1.5 flex items-center gap-1">
+                      <button
+                        onClick={() => copyToClipboard(msg.content, msg.id)}
+                        className="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        title="Copy message"
+                      >
+                        {copiedId === msg.id ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                      </button>
                     </div>
                   )}
                 </div>
@@ -512,78 +445,58 @@ export const ChatWorkbench: React.FC<ChatWorkbenchProps> = ({
             );
           })
         )}
+
+        {sendError && (
+          <div className="max-w-2xl mx-auto p-3.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-sm text-red-700 dark:text-red-300 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-semibold">Chat request failed</div>
+              <div className="text-xs mt-0.5 opacity-90">{sendError}</div>
+            </div>
+          </div>
+        )}
+
+        {isLoading && (
+          <div className="flex gap-3">
+            <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 flex items-center justify-center shrink-0">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 animate-pulse" />
+            </div>
+            <div className="bg-white/80 dark:bg-[#0e1424]/80 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl rounded-bl-md px-4 py-3 text-sm text-slate-500">
+              Thinking...
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Input Composer */}
-      <div className="border-t border-slate-200/80 dark:border-slate-800/80 p-3 sm:p-4 bg-white/80 dark:bg-[#090d16]/85 backdrop-blur-xl">
-        <div className="max-w-4xl mx-auto space-y-2">
-          {sendError && (
-            <div role="alert" className="flex items-start gap-2 rounded-lg border border-rose-300 bg-rose-50 p-2.5 text-xs text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{sendError}</span>
-            </div>
-          )}
-          {/* Quick shortcuts */}
-          <div className="hidden sm:flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-            <span className="text-[11px] text-slate-400 shrink-0 font-medium">Quick prompts:</span>
-            {promptShortcuts.map((s, idx) => (
-              <button
-                key={idx}
-                onClick={() => setInputPrompt(s.prompt)}
-                className="px-2.5 py-1 text-[11px] bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-300 rounded-lg whitespace-nowrap transition-colors"
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-end gap-2">
-            <div className="relative flex-1">
-              <textarea
-                value={inputPrompt}
-                onChange={(e) => setInputPrompt(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                placeholder={`Ask ${activeModel.name} to orchestrate tools, inspect files, or query APIs... (or hold mic)`}
-                rows={2}
-                className="w-full text-xs sm:text-[13px] bg-slate-100/70 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700/80 rounded-xl p-3 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors"
-              />
-            </div>
-
-            {/* Push-to-Talk Speech-to-Text Button */}
-            <PushToTalkButton
-              disabled={isLoading}
-              onTranscript={(transcript) => {
-                setInputPrompt(transcript);
-              }}
-              onAutoSend={async (transcript) => {
-                if (!transcript.trim() || isLoading) return;
-                setIsLoading(true);
-                try {
-                  await onSendMessage(transcript, selectedModelId, systemPrompt);
-                  setSendError(null);
-                } catch (error) {
-                  setSendError(error instanceof Error ? error.message : 'The chat request failed.');
-                } finally {
-                  setIsLoading(false);
+      {/* Input Area */}
+      <div className="border-t border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-[#0b101b]/80 backdrop-blur-xl p-4 sm:px-6">
+        <div className="max-w-3xl mx-auto flex items-end gap-2">
+          <div className="flex-1 relative">
+            <textarea
+              value={inputPrompt}
+              onChange={(e) => setInputPrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
                 }
               }}
+              placeholder={isComparisonMode ? 'Enter a prompt to benchmark across models...' : 'Message OmniFlow...'}
+              rows={1}
+              className="w-full resize-none rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900/80 px-4 py-3 pr-12 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 max-h-32"
+              style={{ minHeight: '44px' }}
             />
-
-            {/* Send Button */}
-            <button
-              onClick={handleSend}
-              disabled={isLoading || !inputPrompt.trim()}
-              className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-40 text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm shadow-indigo-500/20 shrink-0 h-10"
-            >
-              <Send className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Send</span>
-            </button>
           </div>
+          <PushToTalkButton
+            onTranscript={(text) => setInputPrompt((prev) => (prev ? prev + ' ' + text : text))}
+          />
+          <button
+            onClick={handleSend}
+            disabled={!inputPrompt.trim() || isLoading}
+            className="p-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow-sm shadow-indigo-500/25 transition-colors"
+          >
+            <Send className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>

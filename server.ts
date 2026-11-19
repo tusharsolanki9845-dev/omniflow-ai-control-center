@@ -177,6 +177,122 @@ app.post('/api/chat', aiRateLimit, async (req, res) => {
   }
 });
 
+app.post('/api/chat/stream', aiRateLimit, async (req, res) => {
+  const { prompt, systemPrompt, messages: historyMessages, model } = req.body ?? {};
+  const hasHistory = Array.isArray(historyMessages) && historyMessages.length > 0;
+
+  if (!hasHistory && (typeof prompt !== 'string' || !prompt.trim())) {
+    return res.status(400).json({ error: 'Prompt is required.' });
+  }
+
+  if (typeof prompt === 'string' && prompt.length > MAX_PROMPT_LENGTH) {
+    return res.status(413).json({ error: `Prompt must not exceed ${MAX_PROMPT_LENGTH} characters.` });
+  }
+
+  if (systemPrompt !== undefined && (typeof systemPrompt !== 'string' || systemPrompt.length > MAX_SYSTEM_PROMPT_LENGTH)) {
+    return res.status(400).json({ error: `System prompt must be a string of at most ${MAX_SYSTEM_PROMPT_LENGTH} characters.` });
+  }
+
+  if (hasHistory) {
+    if (historyMessages.length > MAX_HISTORY_MESSAGES) {
+      return res.status(413).json({ error: `Conversation history must not exceed ${MAX_HISTORY_MESSAGES} messages.` });
+    }
+    for (const msg of historyMessages) {
+      if (!msg || typeof msg !== 'object' || (msg.role !== 'user' && msg.role !== 'assistant' && msg.role !== 'model')) {
+        return res.status(400).json({ error: 'Each history message must have a role of "user" or "assistant".' });
+      }
+      if (typeof msg.content !== 'string') {
+        return res.status(400).json({ error: 'Each history message must include a string content field.' });
+      }
+    }
+  }
+
+  if (!aiClient) {
+    return res.status(503).json({
+      error: 'AI chat is unavailable because GEMINI_API_KEY is not configured.',
+      code: 'MISSING_API_KEY',
+    });
+  }
+
+  const selectedModel =
+    typeof model === 'string' && model.trim() ? model.trim() : GEMINI_MODEL;
+
+  let contents: any;
+  if (hasHistory) {
+    contents = historyMessages.map((msg: { role: string; content: string }) => ({
+      role: msg.role === 'assistant' || msg.role === 'model' ? 'model' : 'user',
+      parts: [{ text: msg.content }],
+    }));
+    if (typeof prompt === 'string' && prompt.trim()) {
+      contents.push({ role: 'user', parts: [{ text: prompt.trim() }] });
+    }
+  } else {
+    contents = prompt;
+  }
+
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  if (typeof (res as any).flushHeaders === 'function') {
+    (res as any).flushHeaders();
+  }
+
+  try {
+    const stream = await aiClient.models.generateContentStream({
+      model: selectedModel,
+      contents,
+      config: {
+        systemInstruction: systemPrompt || 'You are OmniFlow Control Assistant.',
+      },
+    });
+
+    let fullText = '';
+    for await (const chunk of stream) {
+      const text = typeof chunk.text === 'string' ? chunk.text : '';
+      if (text) {
+        fullText += text;
+        res.write(`data: ${JSON.stringify({ type: 'delta', text })}\n\n`);
+      }
+    }
+
+    res.write(
+      `data: ${JSON.stringify({
+        type: 'done',
+        text: fullText,
+        model: selectedModel,
+        usage: {
+          promptTokens: 0,
+          completionTokens: 0,
+        },
+      })}\n\n`
+    );
+    res.write('data: [DONE]\n\n');
+    res.end();
+  } catch (error) {
+    console.error('Streaming chat failed:', error instanceof Error ? error.name : 'UnknownError');
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    let code = 'PROVIDER_ERROR';
+    let errorText = 'The AI provider could not complete this request.';
+
+    if (message.includes('API_KEY') || message.includes('api key') || message.includes('401')) {
+      code = 'INVALID_API_KEY';
+      errorText = 'Invalid or missing Gemini API key. Check GEMINI_API_KEY in your environment.';
+    } else if (message.includes('quota') || message.includes('429') || message.includes('rate')) {
+      code = 'RATE_LIMIT';
+      errorText = 'Gemini rate limit or quota exceeded. Please try again in a moment.';
+    }
+
+    if (res.headersSent) {
+      res.write(`data: ${JSON.stringify({ type: 'error', error: errorText, code })}\n\n`);
+      res.end();
+    } else {
+      const status = code === 'INVALID_API_KEY' ? 503 : code === 'RATE_LIMIT' ? 429 : 502;
+      res.status(status).json({ error: errorText, code });
+    }
+  }
+});
+
 app.post('/api/transcribe', aiRateLimit, async (req, res) => {
   const { audioBase64, mimeType = 'audio/webm' } = req.body ?? {};
 

@@ -19,6 +19,10 @@ const MAX_AUDIO_BYTES = 15 * 1024 * 1024;
 const MAX_PROMPT_LENGTH = 12_000;
 const MAX_SYSTEM_PROMPT_LENGTH = 2_000;
 const MAX_HISTORY_MESSAGES = 40;
+const MAX_TOTAL_INPUT_CHARS = 30_000;
+const ALLOWED_GEMINI_MODELS = new Set(
+  (process.env.GEMINI_ALLOWED_MODELS || GEMINI_MODEL).split(',').map((value) => value.trim()).filter(Boolean)
+);
 const REPOSITORY_URL =
   process.env.PUBLIC_REPOSITORY_URL ||
   'https://github.com/tusharsolanki9845-dev/omniflow-ai-control-center';
@@ -103,6 +107,14 @@ app.post('/api/chat', aiRateLimit, async (req, res) => {
     }
   }
 
+  const totalInputChars =
+    (typeof prompt === 'string' ? prompt.length : 0) +
+    (typeof systemPrompt === 'string' ? systemPrompt.length : 0) +
+    (hasHistory ? historyMessages.reduce((total: number, msg: { content: string }) => total + msg.content.length, 0) : 0);
+  if (totalInputChars > MAX_TOTAL_INPUT_CHARS) {
+    return res.status(413).json({ error: `Combined prompt and conversation must not exceed ${MAX_TOTAL_INPUT_CHARS} characters.` });
+  }
+
   if (!aiClient) {
     return res.status(503).json({
       error: 'AI chat is unavailable because GEMINI_API_KEY is not configured.',
@@ -112,6 +124,9 @@ app.post('/api/chat', aiRateLimit, async (req, res) => {
 
   const selectedModel =
     typeof model === 'string' && model.trim() ? model.trim() : GEMINI_MODEL;
+  if (!ALLOWED_GEMINI_MODELS.has(selectedModel)) {
+    return res.status(400).json({ error: 'The requested Gemini model is not enabled for this deployment.' });
+  }
 
   try {
     // Build contents for Gemini
@@ -207,6 +222,14 @@ app.post('/api/chat/stream', aiRateLimit, async (req, res) => {
     }
   }
 
+  const totalInputChars =
+    (typeof prompt === 'string' ? prompt.length : 0) +
+    (typeof systemPrompt === 'string' ? systemPrompt.length : 0) +
+    (hasHistory ? historyMessages.reduce((total: number, msg: { content: string }) => total + msg.content.length, 0) : 0);
+  if (totalInputChars > MAX_TOTAL_INPUT_CHARS) {
+    return res.status(413).json({ error: `Combined prompt and conversation must not exceed ${MAX_TOTAL_INPUT_CHARS} characters.` });
+  }
+
   if (!aiClient) {
     return res.status(503).json({
       error: 'AI chat is unavailable because GEMINI_API_KEY is not configured.',
@@ -216,6 +239,9 @@ app.post('/api/chat/stream', aiRateLimit, async (req, res) => {
 
   const selectedModel =
     typeof model === 'string' && model.trim() ? model.trim() : GEMINI_MODEL;
+  if (!ALLOWED_GEMINI_MODELS.has(selectedModel)) {
+    return res.status(400).json({ error: 'The requested Gemini model is not enabled for this deployment.' });
+  }
 
   let contents: any;
   if (hasHistory) {

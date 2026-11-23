@@ -222,6 +222,14 @@ app.post('/api/chat/stream', aiRateLimit, async (req, res) => {
     }
   }
 
+  const totalInputChars =
+    (typeof prompt === 'string' ? prompt.length : 0) +
+    (typeof systemPrompt === 'string' ? systemPrompt.length : 0) +
+    (hasHistory ? historyMessages.reduce((total: number, msg: { content: string }) => total + msg.content.length, 0) : 0);
+  if (totalInputChars > MAX_TOTAL_INPUT_CHARS) {
+    return res.status(413).json({ error: `Combined prompt and conversation must not exceed ${MAX_TOTAL_INPUT_CHARS} characters.` });
+  }
+
   if (!aiClient) {
     return res.status(503).json({
       error: 'AI chat is unavailable because GEMINI_API_KEY is not configured.',
